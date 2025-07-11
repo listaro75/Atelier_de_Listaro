@@ -27,12 +27,33 @@ try {
     echo "Nombre d'images: $imageCount<br>";
     
     if ($imageCount > 0) {
-        $stmt = $DB->query("SELECT product_id, image_path FROM product_images LIMIT 3");
+        $stmt = $DB->query("SELECT id, product_id, image_path, is_main FROM product_images ORDER BY product_id");
         $images = $stmt->fetchAll();
         echo "Images trouvées:<br>";
         foreach ($images as $image) {
-            $exists = file_exists($image['image_path']) ? 'OUI' : 'NON';
-            echo "- Produit {$image['product_id']}: {$image['image_path']} (Existe: $exists)<br>";
+            $fullPath = __DIR__ . '/' . $image['image_path'];
+            $exists = file_exists($fullPath) ? 'OUI' : 'NON';
+            $isMain = $image['is_main'] ? 'PRINCIPALE' : 'secondaire';
+            echo "- ID: {$image['id']}, Produit: {$image['product_id']}, Chemin: '{$image['image_path']}', $isMain<br>";
+            echo "  Chemin complet: $fullPath<br>";
+            echo "  Fichier existe: <strong>$exists</strong><br><br>";
+        }
+    }
+    
+    // Test des chemins spécifiques
+    echo "<h3>Test Chemins Spécifiques</h3>";
+    $testPaths = [
+        'uploads/products/test-product-1.svg',
+        'uploads/products/test-product-2.svg',
+        'uploads/products/test-product-3.svg'
+    ];
+    
+    foreach ($testPaths as $path) {
+        $fullPath = __DIR__ . '/' . $path;
+        $exists = file_exists($fullPath) ? '✅ EXISTE' : '❌ MANQUANT';
+        echo "- $path → $exists<br>";
+        if (file_exists($fullPath)) {
+            echo "  Taille: " . filesize($fullPath) . " bytes<br>";
         }
     }
     
