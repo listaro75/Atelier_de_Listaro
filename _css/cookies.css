@@ -1,0 +1,389 @@
+/* 
+ * STYLES POUR LE SYSTÈME DE COOKIES RGPD
+ * Bandeau de cookies et centre de préférences
+ */
+
+/* Bandeau de cookies */
+.cookie-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    color: white;
+    padding: 20px;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+    z-index: 10000;
+    transform: translateY(100%);
+    transition: transform 0.3s ease-in-out;
+}
+
+.cookie-banner.show {
+    transform: translateY(0);
+}
+
+.cookie-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.cookie-text h3 {
+    margin: 0 0 10px 0;
+    font-size: 1.2em;
+}
+
+.cookie-text p {
+    margin: 0;
+    font-size: 0.9em;
+    opacity: 0.9;
+}
+
+.cookie-actions {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.cookie-actions .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.cookie-actions .btn-primary {
+    background: #27ae60;
+    color: white;
+}
+
+.cookie-actions .btn-secondary {
+    background: #3498db;
+    color: white;
+}
+
+.cookie-actions .btn-danger {
+    background: #e74c3c;
+    color: white;
+}
+
+.cookie-actions .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* Modal de préférences */
+.cookie-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10001;
+}
+
+.cookie-modal .modal-content {
+    background: white;
+    border-radius: 10px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.cookie-modal .modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 10px 10px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cookie-modal .modal-header h2 {
+    margin: 0;
+    font-size: 1.3em;
+}
+
+.cookie-modal .close-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.cookie-modal .modal-body {
+    padding: 20px;
+}
+
+.cookie-category {
+    margin-bottom: 25px;
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: #f9f9f9;
+}
+
+.cookie-category:last-child {
+    margin-bottom: 0;
+}
+
+.category-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.category-header h3 {
+    margin: 0;
+    font-size: 1.1em;
+    color: #333;
+}
+
+.category-header input[type="checkbox"] {
+    transform: scale(1.2);
+    cursor: pointer;
+}
+
+.cookie-category p {
+    margin: 0;
+    font-size: 0.9em;
+    color: #666;
+    line-height: 1.4;
+}
+
+.cookie-modal .modal-footer {
+    padding: 20px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.cookie-modal .modal-footer .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.cookie-modal .modal-footer .btn-primary {
+    background: #667eea;
+    color: white;
+}
+
+.cookie-modal .modal-footer .btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.cookie-modal .modal-footer .btn:hover {
+    opacity: 0.8;
+}
+
+/* Indicateur de cookies */
+.cookie-indicator {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #667eea;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 25px;
+    cursor: pointer;
+    z-index: 9999;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+}
+
+.cookie-indicator:hover {
+    background: #764ba2;
+    transform: scale(1.1);
+}
+
+/* Animations */
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.cookie-modal {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.cookie-modal .modal-content {
+    animation: slideUp 0.3s ease-out;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .cookie-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .cookie-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .cookie-actions .btn {
+        width: 100%;
+    }
+    
+    .cookie-modal .modal-content {
+        width: 95%;
+        margin: 10px;
+    }
+    
+    .cookie-modal .modal-header {
+        padding: 15px;
+    }
+    
+    .cookie-modal .modal-body {
+        padding: 15px;
+    }
+    
+    .cookie-modal .modal-footer {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .cookie-modal .modal-footer .btn {
+        width: 100%;
+    }
+}
+
+/* Styles pour les pages de politique de confidentialité */
+.privacy-policy {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+.privacy-policy h1,
+.privacy-policy h2,
+.privacy-policy h3 {
+    color: #333;
+    margin-top: 30px;
+    margin-bottom: 15px;
+}
+
+.privacy-policy h1 {
+    font-size: 2em;
+    border-bottom: 3px solid #667eea;
+    padding-bottom: 10px;
+}
+
+.privacy-policy h2 {
+    font-size: 1.5em;
+    color: #667eea;
+}
+
+.privacy-policy h3 {
+    font-size: 1.2em;
+}
+
+.privacy-policy ul {
+    padding-left: 20px;
+    margin: 10px 0;
+}
+
+.privacy-policy li {
+    margin: 5px 0;
+}
+
+.privacy-policy .highlight {
+    background: #fff3cd;
+    padding: 15px;
+    border-left: 4px solid #ffc107;
+    margin: 20px 0;
+}
+
+.privacy-policy .important {
+    background: #d4edda;
+    padding: 15px;
+    border-left: 4px solid #28a745;
+    margin: 20px 0;
+}
+
+/* Styles pour les boutons de gestion des données */
+.data-management {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px 0;
+    text-align: center;
+}
+
+.data-management h3 {
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.data-management .btn {
+    margin: 5px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.data-management .btn-info {
+    background: #17a2b8;
+    color: white;
+}
+
+.data-management .btn-warning {
+    background: #ffc107;
+    color: #212529;
+}
+
+.data-management .btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.data-management .btn:hover {
+    opacity: 0.8;
+    transform: translateY(-2px);
+}

@@ -1,7 +1,7 @@
 <?php
+    session_start();
     include_once('_db/connexion_DB.php');
     include_once('_functions/auth.php');
-    session_start();
 
     // Debug des uploads
     error_log("Document Root: " . $_SERVER['DOCUMENT_ROOT']);
@@ -11,7 +11,12 @@
 
     // Vérifier si l'utilisateur est admin
     if (!is_admin()) {
-        header('Location: index.php');
+        // Debug pour comprendre le problème
+        error_log("Accès admin refusé - Session: " . print_r($_SESSION, true));
+        error_log("Fonction is_admin() retourne: " . (is_admin() ? 'true' : 'false'));
+        
+        // Redirection avec message d'erreur
+        header('Location: test_admin.php');
         exit();
     }
 
@@ -109,12 +114,60 @@
                     }
                 }
             } elseif ($_POST['action'] === 'edit') {
-                // Mise à jour sans nouvelle image
+                $name = trim($_POST['name']);
+                $description = trim($_POST['description']);
+                $price = floatval($_POST['price']);
+                $category = trim($_POST['category']);
+                $stock = intval($_POST['stock']);
+                
+                // Mise à jour du produit
                 $stmt = $DB->prepare("UPDATE products SET name = ?, description = ?, price = ?, category = ?, stock = ? WHERE id = ?");
-                $stmt->execute([$name, $description, $price, $category, $stock, $_POST['product_id']]);
+                if ($stmt->execute([$name, $description, $price, $category, $stock, $_POST['product_id']])) {
+                    $success_msg = "Produit mis à jour avec succès !";
+                } else {
+                    $error_msg = "Erreur lors de la mise à jour du produit.";
+                }
             } elseif ($_POST['action'] === 'delete' && isset($_POST['product_id'])) {
-                $stmt = $DB->prepare("DELETE FROM products WHERE id = ?");
-                $stmt->execute([$_POST['product_id']]);
+                try {
+                    $DB->beginTransaction();
+                    
+                    // Récupérer les images du produit avant suppression
+                    $stmt = $DB->prepare("SELECT image_path FROM product_images WHERE product_id = ?");
+                    $stmt->execute([$_POST['product_id']]);
+                    $images = $stmt->fetchAll();
+                    
+                    // Supprimer les fichiers images
+                    foreach ($images as $image) {
+                        if (file_exists($image['image_path'])) {
+                            unlink($image['image_path']);
+                        }
+                    }
+                    
+                    // Supprimer d'abord les images de la base
+                    $stmt = $DB->prepare("DELETE FROM product_images WHERE product_id = ?");
+                    $stmt->execute([$_POST['product_id']]);
+                    
+                    // Supprimer les likes du produit
+                    $stmt = $DB->prepare("DELETE FROM product_likes WHERE product_id = ?");
+                    $stmt->execute([$_POST['product_id']]);
+                    
+                    // Supprimer le produit
+                    $stmt = $DB->prepare("DELETE FROM products WHERE id = ?");
+                    if ($stmt->execute([$_POST['product_id']])) {
+                        $DB->commit();
+                        $success_msg = "Produit supprimé avec succès !";
+                        
+                        // Forcer la sortie pour éviter les problèmes de cache
+                        echo json_encode(['success' => true, 'message' => $success_msg]);
+                        exit();
+                    } else {
+                        $DB->rollback();
+                        $error_msg = "Erreur lors de la suppression du produit.";
+                    }
+                } catch (Exception $e) {
+                    $DB->rollback();
+                    $error_msg = "Erreur lors de la suppression : " . $e->getMessage();
+                }
             } elseif ($_POST['action'] === 'make_main_image' && isset($_POST['product_id']) && isset($_POST['image_id'])) {
                 try {
                     $DB->beginTransaction();
@@ -711,18 +764,45 @@
                 formData.append('action', 'delete');
                 formData.append('product_id', id);
 
+                // Désactiver le bouton pour éviter les clics multiples
+                const button = document.querySelector(`button[onclick*="deleteProduct(${id})"]`);
+                if (button) {
+                    button.disabled = true;
+                    button.textContent = 'Suppression...';
+                }
+
                 fetch('administrateur.php', {
                     method: 'POST',
                     body: formData
                 })
                 .then(response => response.text())
-                .then(() => {
-                    // Rafraîchir la page pour voir les modifications
-                    window.location.reload();
+                .then((data) => {
+                    // Vérifier si c'est du JSON
+                    try {
+                        const result = JSON.parse(data);
+                        if (result.success) {
+                            // Supprimer l'élément de la page sans recharger
+                            const productCard = button.closest('.product-card');
+                            if (productCard) {
+                                productCard.remove();
+                            }
+                            alert('Produit supprimé avec succès !');
+                        } else {
+                            alert('Erreur lors de la suppression');
+                        }
+                    } catch (e) {
+                        // Si ce n'est pas du JSON, recharger la page
+                        window.location.reload();
+                    }
                 })
                 .catch(error => {
                     console.error('Erreur:', error);
                     alert('Une erreur est survenue lors de la suppression du produit');
+                    // Réactiver le bouton en cas d'erreur
+                    if (button) {
+                        button.disabled = false;
+                        button.textContent = 'Supprimer';
+                    }
                 });
             }
         }

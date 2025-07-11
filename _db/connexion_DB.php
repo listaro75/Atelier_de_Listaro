@@ -10,10 +10,11 @@ class ConnexionDB {
     private $connexion;
 
     function __construct(){
-        $this->host = getenv('DB_HOST');
-        $this->dbname = getenv('DB_NAME');
-        $this->user = getenv('DB_USER');
-        $this->pass = getenv('DB_PASS');
+        // Utiliser $_ENV en priorité, puis getenv() en fallback, puis valeurs par défaut InfinityFree
+        $this->host = $_ENV['DB_HOST'] ?? getenv('DB_HOST') ?? 'sql100.infinityfree.com';
+        $this->dbname = $_ENV['DB_NAME'] ?? getenv('DB_NAME') ?? 'if0_39368207_atelier_de_listaro';
+        $this->user = $_ENV['DB_USERNAME'] ?? getenv('DB_USERNAME') ?? 'if0_39368207';
+        $this->pass = $_ENV['DB_PASSWORD'] ?? getenv('DB_PASSWORD') ?? 'HqYnwuxOm3Po';
 
         try {
             $this->connexion = new PDO(

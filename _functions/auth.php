@@ -19,7 +19,15 @@ function get_user_role() {
 }
 
 function is_admin() {
-    return isset($_SESSION['role']) && $_SESSION['role'] === 3;
+    if (!isset($_SESSION['role'])) {
+        return false;
+    }
+    
+    // Nettoyer la valeur du rôle (supprimer espaces, caractères invisibles)
+    $role = trim($_SESSION['role']);
+    
+    // Support des deux systèmes : numérique (3) et textuel ('admin')
+    return $role === 'admin' || $role === '3' || $role === 3;
 }
 
 function force_admin() {

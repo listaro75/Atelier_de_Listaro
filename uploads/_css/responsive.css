@@ -1,0 +1,100 @@
+/* ==========================================================================
+   9. Media Queries
+   ========================================================================== */
+/* Tablette */
+@media (max-width: 768px) {
+    .navbar-content {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 15px;
+    }
+
+    .hamburger-menu {
+        order: 1;
+        display: flex;
+    }
+
+    .auth {
+        order: 2;
+    }
+
+    .nav-main {
+        position: fixed;
+        top: 60px;
+        left: -100%;
+        width: 100%;
+        height: calc(100vh - 60px);
+        background: #f9f9f9;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px 0;
+        transition: left 0.3s ease;
+        z-index: 999;
+    }
+
+    .nav-main.active {
+        left: 0;
+    }
+
+    .products-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+
+    .portfolio-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+    .products-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .portfolio-grid {
+        grid-template-columns: 1fr;
+    }
+
+    h1 {
+        font-size: 32px;
+    }
+
+    .form-container {
+        padding: 20px;
+        margin: 70px 15px;
+    }
+
+    .auth-links {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .btn-secondary {
+        width: 100%;
+        max-width: 200px;
+    }
+
+    .cart-item {
+        grid-template-columns: 80px 1fr;
+        gap: 10px;
+    }
+}
+
+/* Paysage sur mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+    .navbar {
+        position: absolute;
+    }
+
+    .main-container {
+        margin-top: 100px;
+    }
+
+    .login-popup {
+        height: 90vh;
+        overflow-y: auto;
+    }
+} 

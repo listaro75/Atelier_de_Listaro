@@ -1,0 +1,319 @@
+n<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Upload Multiple Images - Admin</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .image-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+            padding: 15px;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            min-height: 120px;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        .image-preview:empty::before {
+            content: "Aucune image sélectionnée";
+            color: #999;
+            font-style: italic;
+            width: 100%;
+            text-align: center;
+        }
+        .image-item {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+        .image-item:hover {
+            transform: scale(1.05);
+        }
+        .image-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .image-item .delete-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s ease;
+        }
+        .image-item .delete-btn:hover {
+            background: #c0392b;
+        }
+        .main-badge {
+            position: absolute;
+            bottom: 5px;
+            left: 5px;
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+        .btn-success {
+            background: #27ae60;
+        }
+        .btn-success:hover {
+            background: #1e8449;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            display: none;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-camera"></i> Test Upload Multiple Images - Admin</h1>
+        <p>Cette page permet de tester le système d'upload multiple d'images dans l'admin.</p>
+        
+        <div class="test-section">
+            <h3><i class="fas fa-plus"></i> Test d'ajout de produit avec plusieurs images</h3>
+            <form id="test-form">
+                <div class="form-group">
+                    <label>Nom du produit</label>
+                    <input type="text" id="product-name" value="Produit Test" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Prix</label>
+                    <input type="number" id="product-price" value="19.99" step="0.01" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Catégorie</label>
+                    <select id="product-category" required>
+                        <option value="Bijoux">Bijoux</option>
+                        <option value="Accessoires">Accessoires</option>
+                        <option value="Décoration">Décoration</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Images (multiple)</label>
+                    <input type="file" id="product-images" multiple accept="image/*" onchange="previewImages(this)">
+                    <small>Sélectionnez plusieurs images. La première sera l'image principale.</small>
+                </div>
+                
+                <div id="image-preview" class="image-preview"></div>
+                
+                <button type="button" class="btn btn-success" onclick="simulateUpload()">
+                    <i class="fas fa-upload"></i> Simuler l'upload
+                </button>
+            </form>
+            
+            <div id="upload-status" class="status"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3><i class="fas fa-info-circle"></i> Instructions de test</h3>
+            <ol>
+                <li>Sélectionnez plusieurs images (2-5 images recommandées)</li>
+                <li>Vérifiez que l'aperçu s'affiche correctement</li>
+                <li>Notez que la première image a le badge "Principal"</li>
+                <li>Testez la suppression d'images avec le bouton ×</li>
+                <li>Cliquez sur "Simuler l'upload" pour voir le résultat</li>
+            </ol>
+        </div>
+        
+        <div class="test-section">
+            <h3><i class="fas fa-cogs"></i> Fonctionnalités testées</h3>
+            <ul>
+                <li>✓ Upload multiple d'images</li>
+                <li>✓ Aperçu en temps réel</li>
+                <li>✓ Identification de l'image principale</li>
+                <li>✓ Suppression d'images avant upload</li>
+                <li>✓ Validation des formats d'image</li>
+                <li>✓ Interface utilisateur intuitive</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Fonction pour prévisualiser les images
+        function previewImages(input) {
+            const preview = document.getElementById('image-preview');
+            preview.innerHTML = '';
+            
+            if (input.files) {
+                Array.from(input.files).forEach((file, index) => {
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const imageDiv = document.createElement('div');
+                            imageDiv.className = 'image-item';
+                            imageDiv.innerHTML = `
+                                <img src="${e.target.result}" alt="Preview">
+                                ${index === 0 ? '<div class="main-badge">Principal</div>' : ''}
+                                <button type="button" class="delete-btn" onclick="removePreviewImage(this, ${index})">&times;</button>
+                            `;
+                            preview.appendChild(imageDiv);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+        }
+
+        // Fonction pour supprimer une image de l'aperçu
+        function removePreviewImage(btn, index) {
+            const input = document.getElementById('product-images');
+            const files = Array.from(input.files);
+            files.splice(index, 1);
+            
+            // Recréer l'input file avec les fichiers restants
+            const dt = new DataTransfer();
+            files.forEach(file => dt.items.add(file));
+            input.files = dt.files;
+            
+            // Rafraîchir l'aperçu
+            previewImages(input);
+        }
+
+        // Fonction pour simuler l'upload
+        function simulateUpload() {
+            const name = document.getElementById('product-name').value;
+            const price = document.getElementById('product-price').value;
+            const category = document.getElementById('product-category').value;
+            const images = document.getElementById('product-images').files;
+            const status = document.getElementById('upload-status');
+            
+            if (!name || !price || !category) {
+                status.className = 'status error';
+                status.textContent = 'Veuillez remplir tous les champs obligatoires.';
+                status.style.display = 'block';
+                return;
+            }
+            
+            if (images.length === 0) {
+                status.className = 'status error';
+                status.textContent = 'Veuillez sélectionner au moins une image.';
+                status.style.display = 'block';
+                return;
+            }
+            
+            // Simulation d'upload réussie
+            status.className = 'status success';
+            status.innerHTML = `
+                <strong>Simulation d'upload réussie!</strong><br>
+                Produit: ${name}<br>
+                Prix: ${price}€<br>
+                Catégorie: ${category}<br>
+                Nombre d'images: ${images.length}<br>
+                Image principale: ${images[0].name}<br>
+                <small>Dans la vraie admin, ces images seraient maintenant uploadées sur le serveur.</small>
+            `;
+            status.style.display = 'block';
+            
+            // Réinitialiser après 5 secondes
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 5000);
+        }
+
+        // Validation des formats d'image
+        document.getElementById('product-images').addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+            
+            const invalidFiles = files.filter(file => !validTypes.includes(file.type));
+            
+            if (invalidFiles.length > 0) {
+                alert(`Formats non supportés détectés: ${invalidFiles.map(f => f.name).join(', ')}\nFormats acceptés: JPG, PNG, GIF`);
+                
+                // Filtrer les fichiers valides
+                const dt = new DataTransfer();
+                files.filter(file => validTypes.includes(file.type)).forEach(file => dt.items.add(file));
+                e.target.files = dt.files;
+            }
+        });
+
+        console.log('Test upload multiple images initialisé');
+    </script>
+</body>
+</html>

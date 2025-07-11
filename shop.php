@@ -149,7 +149,6 @@
                                 </div>
                                 <div class="product-info">
                                     <h3 class="product-name"><?php echo htmlspecialchars($product['name']); ?></h3>
-                                    <p class="product-description"><?php echo htmlspecialchars($product['description']); ?></p>
                                     <div class="product-price"><?php echo number_format($product['price'], 2); ?> €</div>
                                     <div class="product-actions">
                                         <?php

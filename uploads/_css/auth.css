@@ -1,0 +1,101 @@
+/* Style pour les pages d'authentification */
+.auth-page {
+    padding-top: 150px; /* Augmenté pour laisser plus d'espace sous la navbar */
+    min-height: 100vh;
+    background-color: #f5f5f5;
+}
+
+.form-container {
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 2rem;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: #333;
+}
+
+/* Ajout de styles pour le formulaire */
+.form-container form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.form-container label {
+    font-weight: 500;
+    color: #333;
+}
+
+.form-container input {
+    padding: 0.8rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+}
+
+.form-container input:focus {
+    outline: none;
+    border-color: #87CEEB;
+    box-shadow: 0 0 0 2px rgba(135, 206, 235, 0.2);
+}
+
+/* Style du bouton */
+.form-container button {
+    background: #000000; /* Changé en noir */
+    color: white;
+    padding: 1rem;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease; /* Ajouté 'all' pour une transition plus fluide */
+}
+
+.form-container button:hover {
+    background: #333333; /* Gris foncé au survol */
+    transform: translateY(-2px); /* Petit effet de soulèvement */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Ombre légère */
+}
+
+.form-container button:active {
+    transform: translateY(0); /* Retour à la position normale lors du clic */
+    background: #000000; /* Retour au noir lors du clic */
+}
+
+.error {
+    color: #ff0000;
+    font-size: 0.9rem;
+    margin-top: -0.5rem;
+}
+
+/* Style des liens secondaires */
+.auth-links {
+    margin-top: 1.5rem;
+    text-align: center;
+    border-top: 1px solid #eee;
+    padding-top: 1.5rem;
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+}
+
+.btn-secondary {
+    color: #000; /* Noir au lieu de gris */
+    text-decoration: none;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    background: none; /* Pas de fond */
+    border: none;
+    padding: 0;
+}
+
+.btn-secondary:hover {
+    opacity: 0.7; /* Juste une légère transparence au survol */
+    text-decoration: none; /* Suppression du soulignement */
+} 
