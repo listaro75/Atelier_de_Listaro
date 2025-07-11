@@ -1,7 +1,7 @@
 <?php
 /**
  * Vérification et configuration du hostname
- * Atelier de Listaro - Raspberry Pi
+ * Atelier de Listaro - Raspbe  rry Pi
  */
 
 echo "<h1>🖥️ Configuration Hostname - Atelier de Listaro</h1>";
