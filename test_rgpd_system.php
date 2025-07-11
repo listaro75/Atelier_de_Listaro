@@ -47,10 +47,13 @@ try {
     // Test 2: Insertion de données de test
     echo "<h2>2. Test d'insertion de données</h2>";
     
-    // Test consentement
+    // Test consentement avec tous les champs obligatoires
     $test_ip = '192.168.1.100';
-    $stmt = $DB->prepare("INSERT INTO cookie_consents (ip_address, is_active, consent_data, user_agent, date_created) 
-        VALUES (?, 1, ?, 'Test User Agent', NOW())");
+    $test_session = 'test_session_' . uniqid();
+    
+    $stmt = $DB->prepare("INSERT INTO cookie_consents 
+        (session_id, consent_data, ip_address, user_agent, is_active, date_created) 
+        VALUES (?, ?, ?, ?, 1, NOW())");
     
     $consent_data = json_encode([
         'essential' => true,
@@ -59,15 +62,23 @@ try {
         'preferences' => true
     ]);
     
-    if ($stmt->execute([$test_ip, $consent_data])) {
+    if ($stmt->execute([$test_session, $consent_data, $test_ip, 'Test User Agent RGPD'])) {
         echo "<p class='success'>✓ Consentement de test inséré avec succès</p>";
     }
     
-    // Test collecte de données
-    $stmt = $DB->prepare("INSERT INTO user_data_collection (ip_address, data_type, data_content, user_agent, date_created) 
-        VALUES (?, ?, ?, 'Test User Agent', NOW())");
+    // Test collecte de données avec tous les champs obligatoires
+    $stmt = $DB->prepare("INSERT INTO user_data_collection 
+        (session_id, data_type, data_content, ip_address, user_agent, page_url, consent_given, date_created) 
+        VALUES (?, ?, ?, ?, ?, ?, 1, NOW())");
     
-    if ($stmt->execute([$test_ip, 'navigation', 'page_view:/test'])) {
+    if ($stmt->execute([
+        $test_session, 
+        'navigation', 
+        'page_view:/test-rgpd', 
+        $test_ip, 
+        'Test User Agent RGPD',
+        '/test-rgpd'
+    ])) {
         echo "<p class='success'>✓ Collecte de données de test insérée avec succès</p>";
     }
     
@@ -137,13 +148,15 @@ try {
     // Test 5: Nettoyage des données de test
     echo "<h2>5. Nettoyage des données de test</h2>";
     
-    $stmt = $DB->prepare("DELETE FROM cookie_consents WHERE ip_address = ?");
-    $stmt->execute([$test_ip]);
+    $stmt = $DB->prepare("DELETE FROM cookie_consents WHERE session_id = ?");
+    $stmt->execute([$test_session]);
+    $consents_deleted = $stmt->rowCount();
     
-    $stmt = $DB->prepare("DELETE FROM user_data_collection WHERE ip_address = ?");
-    $stmt->execute([$test_ip]);
+    $stmt = $DB->prepare("DELETE FROM user_data_collection WHERE session_id = ?");
+    $stmt->execute([$test_session]);
+    $collections_deleted = $stmt->rowCount();
     
-    echo "<p class='success'>✓ Données de test supprimées</p>";
+    echo "<p class='success'>✓ Données de test supprimées ($consents_deleted consentements, $collections_deleted collectes)</p>";
     
     echo "<h2>✅ Test terminé avec succès!</h2>";
     echo "<p>Le système RGPD est compatible avec votre structure de base de données existante.</p>";
@@ -203,11 +216,12 @@ function getDataCollectionStats($DB) {
         'types' => []
     ];
     
-    // Statistiques globales avec la vraie structure
+    // Statistiques globales avec la vraie structure (consent_given existe!)
     $stmt = $DB->query("SELECT 
         COUNT(*) as total_collections,
         COUNT(DISTINCT ip_address) as unique_visitors,
-        AVG(CHAR_LENGTH(data_content)) as avg_data_size
+        AVG(CHAR_LENGTH(data_content)) as avg_data_size,
+        SUM(CASE WHEN consent_given = 1 THEN 1 ELSE 0 END) as collections_with_consent
     FROM user_data_collection 
     WHERE date_created >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
     
@@ -215,15 +229,20 @@ function getDataCollectionStats($DB) {
         $stats['global'] = [
             'total_collections' => (int)$row['total_collections'],
             'unique_visitors' => (int)$row['unique_visitors'],
-            'avg_data_size' => (float)$row['avg_data_size']
+            'avg_data_size' => (float)$row['avg_data_size'],
+            'collections_with_consent' => (int)$row['collections_with_consent']
         ];
     }
     
     // Types de données collectées avec mapping
-    $stmt = $DB->query("SELECT data_type, COUNT(*) as count 
-        FROM user_data_collection 
-        WHERE date_created >= DATE_SUB(NOW(), INTERVAL 30 DAY) 
-        GROUP BY data_type");
+    $stmt = $DB->query("SELECT 
+        data_type, 
+        COUNT(*) as count,
+        SUM(CASE WHEN consent_given = 1 THEN 1 ELSE 0 END) as with_consent
+    FROM user_data_collection 
+    WHERE date_created >= DATE_SUB(NOW(), INTERVAL 30 DAY) 
+    GROUP BY data_type
+    ORDER BY count DESC");
     
     $type_mapping = [
         'navigation' => 'essential',
@@ -235,7 +254,16 @@ function getDataCollectionStats($DB) {
     
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $category = $type_mapping[$row['data_type']] ?? 'other';
-        $stats['types'][$category] = ($stats['types'][$category] ?? 0) + (int)$row['count'];
+        if (!isset($stats['types'][$category])) {
+            $stats['types'][$category] = 0;
+        }
+        $stats['types'][$category] += (int)$row['count'];
+        
+        // Ajouter détails par type
+        $stats['details'][$row['data_type']] = [
+            'count' => (int)$row['count'],
+            'with_consent' => (int)$row['with_consent']
+        ];
     }
     
     return $stats;

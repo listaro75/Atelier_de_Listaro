@@ -73,24 +73,27 @@ function getConsentStats($db) {
 // Statistiques de collecte de données
 function getDataCollectionStats($db) {
     try {
-        // Volume de données collectées avec la structure existante
+        // Volume de données collectées avec la structure existante (avec consent_given)
         $stmt = $db->query("SELECT 
             COUNT(*) as total_collections,
             COUNT(DISTINCT ip_address) as unique_visitors,
-            AVG(CHAR_LENGTH(data_content)) as avg_data_size
+            AVG(CHAR_LENGTH(data_content)) as avg_data_size,
+            SUM(CASE WHEN consent_given = 1 THEN 1 ELSE 0 END) as collections_with_consent,
+            ROUND(AVG(CASE WHEN consent_given = 1 THEN 1 ELSE 0 END) * 100, 2) as consent_rate
         FROM user_data_collection 
         WHERE date_created >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
         
         $stats = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        // Collectes récentes
+        // Collectes récentes avec informations de consentement
         $stmt = $db->query("SELECT 
             date_created,
             data_type,
             data_content,
             ip_address,
             page_url,
-            referer
+            referer,
+            consent_given
         FROM user_data_collection 
         WHERE date_created >= DATE_SUB(NOW(), INTERVAL 7 DAY)
         ORDER BY date_created DESC
@@ -98,10 +101,11 @@ function getDataCollectionStats($db) {
         
         $collections = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Analyser les types de données
+        // Analyser les types de données avec consentement
         $stmt = $db->query("SELECT 
             data_type,
-            COUNT(*) as count
+            COUNT(*) as count,
+            SUM(CASE WHEN consent_given = 1 THEN 1 ELSE 0 END) as with_consent
         FROM user_data_collection 
         WHERE date_created >= DATE_SUB(NOW(), INTERVAL 30 DAY)
         GROUP BY data_type
@@ -117,35 +121,62 @@ function getDataCollectionStats($db) {
             'marketing' => 0
         ];
         
+        $consent_by_type = [
+            'essential' => 0,
+            'analytics' => 0,
+            'preferences' => 0,
+            'marketing' => 0
+        ];
+        
         foreach ($data_types_raw as $type) {
             $type_name = strtolower($type['data_type']);
             $count = $type['count'];
+            $with_consent = $type['with_consent'];
             
-            if (in_array($type_name, ['session', 'essential', 'security', 'functional'])) {
+            if (in_array($type_name, ['session', 'essential', 'security', 'functional', 'navigation', 'form_data'])) {
                 $data_types['essential'] += $count;
-            } elseif (in_array($type_name, ['analytics', 'tracking', 'statistics', 'performance'])) {
+                $consent_by_type['essential'] += $with_consent;
+            } elseif (in_array($type_name, ['analytics', 'tracking', 'statistics', 'performance', 'analytics_data'])) {
                 $data_types['analytics'] += $count;
-            } elseif (in_array($type_name, ['preferences', 'settings', 'customization'])) {
+                $consent_by_type['analytics'] += $with_consent;
+            } elseif (in_array($type_name, ['preferences', 'settings', 'customization', 'user_preferences'])) {
                 $data_types['preferences'] += $count;
-            } elseif (in_array($type_name, ['marketing', 'advertising', 'promotion', 'campaign'])) {
+                $consent_by_type['preferences'] += $with_consent;
+            } elseif (in_array($type_name, ['marketing', 'advertising', 'promotion', 'campaign', 'marketing_data'])) {
                 $data_types['marketing'] += $count;
+                $consent_by_type['marketing'] += $with_consent;
             } else {
-                // Par défaut, considérer comme analytique
-                $data_types['analytics'] += $count;
+                // Par défaut, considérer comme essentiel
+                $data_types['essential'] += $count;
+                $consent_by_type['essential'] += $with_consent;
             }
         }
         
         return [
-            'global' => $stats ?: ['total_collections' => 0, 'unique_visitors' => 0, 'avg_data_size' => 0],
+            'global' => $stats ?: [
+                'total_collections' => 0, 
+                'unique_visitors' => 0, 
+                'avg_data_size' => 0,
+                'collections_with_consent' => 0,
+                'consent_rate' => 0
+            ],
             'types' => $data_types,
+            'consent_by_type' => $consent_by_type,
             'types_raw' => $data_types_raw,
             'recent' => array_slice($collections, 0, 10)
         ];
         
     } catch (Exception $e) {
         return [
-            'global' => ['total_collections' => 0, 'unique_visitors' => 0, 'avg_data_size' => 0],
+            'global' => [
+                'total_collections' => 0, 
+                'unique_visitors' => 0, 
+                'avg_data_size' => 0,
+                'collections_with_consent' => 0,
+                'consent_rate' => 0
+            ],
             'types' => ['essential' => 0, 'analytics' => 0, 'preferences' => 0, 'marketing' => 0],
+            'consent_by_type' => ['essential' => 0, 'analytics' => 0, 'preferences' => 0, 'marketing' => 0],
             'types_raw' => [],
             'recent' => []
         ];
