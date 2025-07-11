@@ -45,9 +45,7 @@
                         <a href="my_orders.php">Mes commandes</a>
                         <a href="profil.php">Mon Profil</a>
                         <?php if(is_admin()): ?>
-                            <a href="administrateur.php">Gérer les produits</a>
-                            <a href="admin_prestations.php">Gérer les prestations</a>
-                            <a href="admin_orders.php">Gérer les commandes</a>
+                            <a href="admin_panel.php">admin</a>
                         <?php endif; ?>
                         <a href="deconnexion.php">Déconnexion</a>
                     </div>
