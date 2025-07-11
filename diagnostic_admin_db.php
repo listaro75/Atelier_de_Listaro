@@ -76,7 +76,7 @@ try {
     
     // Test prestations avec images
     echo "<h3>Test prestations avec images :</h3>";
-    $stmt = $DB->query("SELECT p.id, p.title, COUNT(pi.id) as image_count 
+    $stmt = $DB->query("SELECT p.id, p.name, COUNT(pi.id) as image_count 
                        FROM prestations p 
                        LEFT JOIN prestation_images pi ON p.id = pi.prestation_id 
                        GROUP BY p.id 
@@ -87,7 +87,7 @@ try {
     if (count($prestations) > 0) {
         echo "<ul>";
         foreach ($prestations as $prestation) {
-            echo "<li>ID: " . $prestation['id'] . " - " . htmlspecialchars($prestation['title']) . " (" . $prestation['image_count'] . " images)</li>";
+            echo "<li>ID: " . $prestation['id'] . " - " . htmlspecialchars($prestation['name']) . " (" . $prestation['image_count'] . " images)</li>";
         }
         echo "</ul>";
     }
