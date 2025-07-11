@@ -60,17 +60,29 @@ try {
     }
     echo "</ul>";
     
-    // Tester la table users
-    echo "<h2>Test de la table users :</h2>";
-    $stmt = $DB->query("SELECT COUNT(*) as count FROM users");
+    // Tester la table user (nom correct de la table)
+    echo "<h2>Test de la table user :</h2>";
+    $stmt = $DB->query("SELECT COUNT(*) as count FROM user");
     $count = $stmt->fetch();
     echo "<p>Nombre d'utilisateurs : " . $count['count'] . "</p>";
     
-    // Tester la table produits
-    echo "<h2>Test de la table produits :</h2>";
-    $stmt = $DB->query("SELECT COUNT(*) as count FROM produits");
+    // Tester la table products (nom correct de la table)
+    echo "<h2>Test de la table products :</h2>";
+    $stmt = $DB->query("SELECT COUNT(*) as count FROM products");
     $count = $stmt->fetch();
     echo "<p>Nombre de produits : " . $count['count'] . "</p>";
+    
+    // Tester la table prestations
+    echo "<h2>Test de la table prestations :</h2>";
+    $stmt = $DB->query("SELECT COUNT(*) as count FROM prestations");
+    $count = $stmt->fetch();
+    echo "<p>Nombre de prestations : " . $count['count'] . "</p>";
+    
+    // Tester la table orders
+    echo "<h2>Test de la table orders :</h2>";
+    $stmt = $DB->query("SELECT COUNT(*) as count FROM orders");
+    $count = $stmt->fetch();
+    echo "<p>Nombre de commandes : " . $count['count'] . "</p>";
     
     echo "<h1 style='color: green;'>🎉 Tous les tests sont passés avec succès !</h1>";
     
