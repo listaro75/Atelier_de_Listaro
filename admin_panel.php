@@ -510,6 +510,9 @@ try {
                 <li><a href="#" onclick="showSection('rgpd')">
                     <i class="fas fa-shield-alt"></i> RGPD / Cookies
                 </a></li>
+                <li><a href="#" onclick="showSection('system')">
+                    <i class="fas fa-server"></i> État du Système
+                </a></li>
                 <li><a href="#" onclick="showSection('settings')">
                     <i class="fas fa-cog"></i> Paramètres
                 </a></li>
@@ -560,6 +563,9 @@ try {
                         <div class="label">Commandes</div>
                     </div>
                 </div>
+                
+                <!-- Section Statistiques Système Raspberry Pi -->
+                <?php include 'admin_sections/system_stats.php'; ?>
                 
                 <h3>Actions rapides</h3>
                 <div style="display: flex; gap: 15px; margin-top: 20px;">
@@ -626,6 +632,14 @@ try {
                 </div>
             </div>
 
+            <!-- System Stats Section -->
+            <div id="system-section" class="content-section">
+                <div id="system-content">
+                    <h3>État du Système</h3>
+                    <p>Chargement des statistiques système...</p>
+                </div>
+            </div>
+
             <!-- Settings Section -->
             <div id="settings-section" class="content-section">
                 <h3>Paramètres du système</h3>
@@ -654,6 +668,7 @@ try {
             users: false,
             orders: false,
             rgpd: false,
+            system: false,
             settings: true
         };
 
@@ -683,6 +698,7 @@ try {
                 users: 'Gestion des utilisateurs',
                 orders: 'Gestion des commandes',
                 rgpd: 'Centre de contrôle RGPD',
+                system: 'État du Système',
                 settings: 'Paramètres'
             };
             
