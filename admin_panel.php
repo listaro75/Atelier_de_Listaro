@@ -507,6 +507,9 @@ try {
                 <li><a href="#" onclick="showSection('orders')">
                     <i class="fas fa-shopping-cart"></i> Commandes
                 </a></li>
+                <li><a href="#" onclick="showSection('newsletter')">
+                    <i class="fas fa-envelope"></i> Newsletter
+                </a></li>
                 <li><a href="#" onclick="showSection('rgpd')">
                     <i class="fas fa-shield-alt"></i> RGPD / Cookies
                 </a></li>
@@ -624,6 +627,83 @@ try {
                 </div>
             </div>
 
+            <!-- Newsletter Section -->
+            <div id="newsletter-section" class="content-section">
+                <div id="newsletter-content">
+                    <h3><i class="fas fa-envelope"></i> Gestion Newsletter</h3>
+                    <div id="newsletter-alerts"></div>
+                    
+                    <!-- Statistiques Newsletter -->
+                    <div class="stats-cards" style="margin-bottom: 30px;">
+                        <div class="stat-card">
+                            <div class="icon"><i class="fas fa-users"></i></div>
+                            <div class="number" id="newsletter-subscribers">-</div>
+                            <div class="label">Abonnés Newsletter</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="icon"><i class="fas fa-paper-plane"></i></div>
+                            <div class="number" id="newsletter-sent">0</div>
+                            <div class="label">Emails envoyés</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="icon"><i class="fas fa-server"></i></div>
+                            <div class="number">Gmail SMTP</div>
+                            <div class="label">Service Email</div>
+                        </div>
+                    </div>
+
+                    <!-- Formulaire d'envoi Newsletter -->
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                        <h4><i class="fas fa-edit"></i> Envoyer une Newsletter</h4>
+                        <form id="newsletter-form">
+                            <div class="form-group">
+                                <label for="newsletter-subject">Sujet de l'email :</label>
+                                <input type="text" id="newsletter-subject" class="form-control" required 
+                                       placeholder="Ex: Nouvelles créations - Atelier de Listaro">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="newsletter-message">Message :</label>
+                                <textarea id="newsletter-message" rows="8" class="form-control" required 
+                                          placeholder="Votre message pour la newsletter..."></textarea>
+                                <small class="form-text text-muted">
+                                    Vous pouvez utiliser du HTML basique (balises &lt;p&gt;, &lt;strong&gt;, &lt;br&gt;, etc.)
+                                </small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="newsletter-test" style="margin-right: 10px;">
+                                    Mode test (envoyer seulement à votre email)
+                                </label>
+                            </div>
+                            
+                            <div class="form-group">
+                                <button type="submit" class="btn btn-primary" id="send-newsletter-btn">
+                                    <i class="fas fa-paper-plane"></i> Envoyer Newsletter
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="previewNewsletter()">
+                                    <i class="fas fa-eye"></i> Aperçu
+                                </button>
+                                <button type="button" class="btn btn-info" onclick="testEmailConfig()">
+                                    <i class="fas fa-cog"></i> Test Email
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Liste des abonnés -->
+                    <div style="background: white; padding: 20px; border-radius: 10px;">
+                        <h4><i class="fas fa-list"></i> Liste des Abonnés</h4>
+                        <div id="newsletter-subscribers-list">
+                            <div style="text-align: center; padding: 20px;">
+                                <i class="fas fa-spinner fa-spin"></i> Chargement...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- RGPD Section -->
             <div id="rgpd-section" class="content-section">
                 <div id="rgpd-content">
@@ -667,6 +747,7 @@ try {
             prestations: false,
             users: false,
             orders: false,
+            newsletter: false,
             rgpd: false,
             system: false,
             settings: true
@@ -697,6 +778,7 @@ try {
                 prestations: 'Gestion des prestations',
                 users: 'Gestion des utilisateurs',
                 orders: 'Gestion des commandes',
+                newsletter: 'Gestion Newsletter',
                 rgpd: 'Centre de contrôle RGPD',
                 system: 'État du Système',
                 settings: 'Paramètres'
@@ -783,6 +865,191 @@ try {
                 }
             }, 1000);
         });
+
+        // ===== FONCTIONS NEWSLETTER =====
+        
+        // Charger les statistiques newsletter
+        function loadNewsletterStats() {
+            fetch('admin_actions/newsletter_stats.php')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('newsletter-subscribers').textContent = data.subscribers || 0;
+                    document.getElementById('newsletter-sent').textContent = data.sent || 0;
+                })
+                .catch(error => console.error('Erreur stats newsletter:', error));
+        }
+
+        // Charger la liste des abonnés
+        function loadNewsletterSubscribers() {
+            fetch('admin_actions/newsletter_subscribers.php')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('newsletter-subscribers-list').innerHTML = html;
+                })
+                .catch(error => {
+                    document.getElementById('newsletter-subscribers-list').innerHTML = 
+                        '<div class="alert alert-error">Erreur lors du chargement des abonnés</div>';
+                });
+        }
+
+        // Envoyer la newsletter
+        document.addEventListener('DOMContentLoaded', function() {
+            const newsletterForm = document.getElementById('newsletter-form');
+            if (newsletterForm) {
+                newsletterForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const subject = document.getElementById('newsletter-subject').value;
+                    const message = document.getElementById('newsletter-message').value;
+                    const testMode = document.getElementById('newsletter-test').checked;
+                    const sendBtn = document.getElementById('send-newsletter-btn');
+                    
+                    if (!subject || !message) {
+                        showNewsletterAlert('error', 'Veuillez remplir tous les champs');
+                        return;
+                    }
+                    
+                    // Confirmation
+                    const confirmMessage = testMode ? 
+                        'Envoyer un email de test ?' : 
+                        'Êtes-vous sûr de vouloir envoyer cette newsletter à tous les abonnés ?';
+                    
+                    if (!confirm(confirmMessage)) return;
+                    
+                    // Désactiver le bouton et afficher le loader
+                    sendBtn.disabled = true;
+                    sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi en cours...';
+                    
+                    // Envoyer la newsletter
+                    fetch('admin_actions/send_newsletter.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            subject: subject,
+                            message: message,
+                            test_mode: testMode
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showNewsletterAlert('success', data.message);
+                            if (!testMode) {
+                                // Réinitialiser le formulaire
+                                newsletterForm.reset();
+                            }
+                            // Recharger les stats
+                            loadNewsletterStats();
+                        } else {
+                            showNewsletterAlert('error', data.message);
+                        }
+                    })
+                    .catch(error => {
+                        showNewsletterAlert('error', 'Erreur lors de l\'envoi: ' + error.message);
+                    })
+                    .finally(() => {
+                        // Réactiver le bouton
+                        sendBtn.disabled = false;
+                        sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer Newsletter';
+                    });
+                });
+            }
+        });
+
+        // Afficher une alerte newsletter
+        function showNewsletterAlert(type, message) {
+            const alertsDiv = document.getElementById('newsletter-alerts');
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
+            
+            alertsDiv.innerHTML = `
+                <div class="alert ${alertClass}" style="display: block;">
+                    ${message}
+                </div>
+            `;
+            
+            // Masquer l'alerte après 5 secondes
+            setTimeout(() => {
+                alertsDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        // Aperçu de la newsletter
+        function previewNewsletter() {
+            const subject = document.getElementById('newsletter-subject').value;
+            const message = document.getElementById('newsletter-message').value;
+            
+            if (!subject || !message) {
+                showNewsletterAlert('error', 'Veuillez remplir tous les champs pour l\'aperçu');
+                return;
+            }
+            
+            // Ouvrir l'aperçu dans une nouvelle fenêtre
+            const previewWindow = window.open('', 'preview', 'width=800,height=600,scrollbars=yes');
+            previewWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Aperçu - ${subject}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 20px; }
+                        .email-preview { max-width: 600px; margin: 0 auto; border: 1px solid #ddd; }
+                        .email-header { background: #2c3e50; color: white; padding: 20px; text-align: center; }
+                        .email-content { padding: 30px; }
+                        .email-footer { background: #ecf0f1; padding: 20px; text-align: center; font-size: 12px; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Aperçu Newsletter</h1>
+                    <div class="email-preview">
+                        <div class="email-header">
+                            <h2>🎨 Atelier de Listaro</h2>
+                            <h3>${subject}</h3>
+                        </div>
+                        <div class="email-content">
+                            ${message}
+                        </div>
+                        <div class="email-footer">
+                            <p>© 2025 Atelier de Listaro - Créations artisanales uniques</p>
+                            <p>📧 contact@atelierdelistaro.fr | 🌐 atelierdelistaro.fr</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `);
+        }
+
+        // Test de la configuration email
+        function testEmailConfig() {
+            fetch('test_gmail_smtp.php?email=lucien.dacunha@gmail.com')
+                .then(response => response.text())
+                .then(html => {
+                    // Ouvrir les résultats dans une nouvelle fenêtre
+                    const testWindow = window.open('', 'emailtest', 'width=900,height=700,scrollbars=yes');
+                    testWindow.document.write(html);
+                })
+                .catch(error => {
+                    showNewsletterAlert('error', 'Erreur lors du test email: ' + error.message);
+                });
+        }
+
+        // Charger les données newsletter quand la section est affichée
+        function loadNewsletterContent() {
+            loadNewsletterStats();
+            loadNewsletterSubscribers();
+        }
+
+        // Intercepter le chargement de la section newsletter
+        const originalLoadSectionContent = loadSectionContent;
+        function loadSectionContent(sectionName) {
+            if (sectionName === 'newsletter') {
+                sectionsLoaded.newsletter = true;
+                loadNewsletterContent();
+            } else {
+                originalLoadSectionContent(sectionName);
+            }
+        }
     </script>
 </body>
 </html>
