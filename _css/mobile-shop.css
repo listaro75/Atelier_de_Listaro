@@ -4,6 +4,8 @@
         grid-template-columns: repeat(2, 1fr) !important;
         gap: 8px !important;
         padding: 0 8px !important;
+        justify-items: center;
+        align-items: start;
     }
     
     .product-card {
@@ -36,6 +38,7 @@
     
     .product-info {
         padding: 8px 6px;
+        text-align: center;
     }
     
     .product-name {
@@ -64,6 +67,7 @@
     /* Optimisation des filtres sur mobile */
     .shop-container {
         padding: 10px 8px;
+        text-align: center;
     }
     
     .filters {
@@ -92,6 +96,7 @@
     .products-grid {
         gap: 6px !important;
         padding: 0 4px !important;
+        justify-items: center;
     }
     
     .product-card {
@@ -104,6 +109,7 @@
     
     .product-info {
         padding: 6px 4px;
+        text-align: center;
     }
     
     .product-name {
