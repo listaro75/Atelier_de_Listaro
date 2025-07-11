@@ -132,16 +132,38 @@ require_once '_functions/email_config_raspberry.php';
                 try {
                     $result = sendEmail($to, $subject, $message, 'noreply@atelierdelistaro.fr', $method);
                     
-                    if ($result['success']) {
-                        echo '<div class="status-box success">';
-                        echo '<h3>✅ Email envoyé avec succès !</h3>';
-                        echo '<p>' . htmlspecialchars($result['message']) . '</p>';
-                        echo '</div>';
+                    if (is_array($result) && isset($result['success'])) {
+                        if ($result['success']) {
+                            echo '<div class="status-box success">';
+                            echo '<h3>✅ Email envoyé avec succès !</h3>';
+                            echo '<p>' . htmlspecialchars($result['message']) . '</p>';
+                            echo '</div>';
+                        } else {
+                            echo '<div class="status-box error">';
+                            echo '<h3>❌ Erreur lors de l\'envoi</h3>';
+                            echo '<p>' . htmlspecialchars($result['message']) . '</p>';
+                            
+                            if (isset($result['diagnostics'])) {
+                                echo '<h4>🔍 Diagnostic:</h4><ul>';
+                                foreach ($result['diagnostics'] as $diag) {
+                                    echo '<li>' . htmlspecialchars($diag) . '</li>';
+                                }
+                                echo '</ul>';
+                            }
+                            echo '</div>';
+                        }
                     } else {
-                        echo '<div class="status-box error">';
-                        echo '<h3>❌ Erreur lors de l\'envoi</h3>';
-                        echo '<p>' . htmlspecialchars($result['message']) . '</p>';
-                        echo '</div>';
+                        // Ancienne logique pour compatibilité
+                        if ($result) {
+                            echo '<div class="status-box success">';
+                            echo '<h3>✅ Email envoyé avec succès !</h3>';
+                            echo '</div>';
+                        } else {
+                            echo '<div class="status-box error">';
+                            echo '<h3>❌ Erreur lors de l\'envoi</h3>';
+                            echo '<p>La fonction a retourné FALSE</p>';
+                            echo '</div>';
+                        }
                     }
                 } catch (Exception $e) {
                     echo '<div class="status-box error">';
@@ -269,6 +291,27 @@ echo htmlspecialchars($postfix_queue);
                     <li><strong>SPF record:</strong> v=spf1 ip4:[IP_DE_VOTRE_RASPBERRY] ~all</li>
                 </ul>
                 <p><em>Remplacez [IP_DE_VOTRE_RASPBERRY] par l'IP publique de votre Raspberry Pi.</em></p>
+            </div>
+        </div>
+        
+        <!-- Outils de dépannage -->
+        <div class="test-section">
+            <h2>🔧 Outils de dépannage</h2>
+            <div class="status-box info">
+                <h3>🛠️ Scripts disponibles</h3>
+                <ul>
+                    <li><strong><a href="fix_email_raspberry.php" target="_blank">Interface de correction</a></strong> - Diagnostic et correction automatique</li>
+                    <li><strong>Diagnostic complet:</strong> <code>./diagnostic_mail.sh votre@email.com</code></li>
+                    <li><strong>Test manuel:</strong> <code>/home/pi/test_email.sh votre@email.com</code></li>
+                </ul>
+                
+                <p><strong>Si l'envoi échoue :</strong></p>
+                <ol>
+                    <li>Utilisez l'<a href="fix_email_raspberry.php">interface de correction</a> pour diagnostiquer</li>
+                    <li>Vérifiez que Postfix est bien installé et configuré</li>
+                    <li>Assurez-vous que les enregistrements DNS sont configurés</li>
+                    <li>Vérifiez les logs avec <code>tail -f /var/log/mail.log</code></li>
+                </ol>
             </div>
         </div>
         

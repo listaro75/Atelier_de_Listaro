@@ -63,9 +63,9 @@ $email_config = [
 ];
 */
 
-// CONFIGURATION TEMPORAIRE POUR TEST (à remplacer)
+// CONFIGURATION ACTIVE - Postfix local sur Raspberry Pi
 $email_config = [
-    'method' => 'test',
+    'method' => 'local',
     'from_email' => 'noreply@atelierdelistaro.fr',
     'from_name' => 'Atelier de Listaro',
     'reply_to' => 'contact@atelierdelistaro.fr'
@@ -78,28 +78,36 @@ $email_config = [
 /**
  * Envoie un email via la méthode configurée
  */
-function sendEmail($to, $subject, $body, $isHtml = true) {
+function sendEmail($to, $subject, $body, $from = null, $method = null) {
     global $email_config;
     
+    // Utiliser la méthode spécifiée ou celle par défaut
+    $useMethod = $method ?: $email_config['method'];
+    $fromEmail = $from ?: $email_config['from_email'];
+    
     $headers = getEmailHeaders(
-        $email_config['from_email'], 
+        $fromEmail, 
         $email_config['from_name'], 
         $email_config['reply_to']
     );
     
-    switch ($email_config['method']) {
+    switch ($useMethod) {
         case 'smtp':
+        case 'gmail':
+        case 'ovh':
+        case 'mailgun':
             return sendEmailSMTP($to, $subject, $body, $headers, $email_config);
             
         case 'local':
+        case 'postfix':
             return sendEmailLocal($to, $subject, $body, $headers);
             
         case 'test':
             return logEmailForTesting($to, $subject, $body);
             
         default:
-            error_log("Méthode email non supportée: " . $email_config['method']);
-            return false;
+            error_log("Méthode email non supportée: " . $useMethod);
+            return ['success' => false, 'message' => "Méthode '$useMethod' non supportée"];
     }
 }
 
@@ -137,7 +145,47 @@ function sendEmailSMTP($to, $subject, $body, $headers, $config) {
  * Envoi via postfix local (Raspberry Pi)
  */
 function sendEmailLocal($to, $subject, $body, $headers) {
-    return mail($to, $subject, $body, $headers);
+    // Log de debug
+    error_log("Tentative d'envoi email local via Postfix");
+    error_log("To: $to, Subject: $subject");
+    
+    // Tentative d'envoi
+    $result = mail($to, $subject, $body, $headers);
+    
+    if ($result) {
+        $message = "Email envoyé avec succès via Postfix local";
+        error_log($message);
+        return ['success' => true, 'message' => $message];
+    } else {
+        $message = "Échec de l'envoi via Postfix local. Vérifiez la configuration Postfix et les logs.";
+        error_log($message);
+        
+        // Vérifications supplémentaires
+        $diagnostics = [];
+        
+        // Vérification sendmail path
+        $sendmail_path = ini_get('sendmail_path');
+        if (empty($sendmail_path)) {
+            $diagnostics[] = "sendmail_path vide dans PHP";
+        } else {
+            $diagnostics[] = "sendmail_path: $sendmail_path";
+        }
+        
+        // Vérification si sendmail existe
+        if (!file_exists('/usr/sbin/sendmail')) {
+            $diagnostics[] = "/usr/sbin/sendmail n'existe pas";
+        }
+        
+        // Vérification Postfix
+        $postfix_status = shell_exec('systemctl is-active postfix 2>/dev/null');
+        $diagnostics[] = "Postfix status: " . trim($postfix_status);
+        
+        return [
+            'success' => false, 
+            'message' => $message,
+            'diagnostics' => $diagnostics
+        ];
+    }
 }
 
 /**
