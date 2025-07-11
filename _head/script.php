@@ -1,5 +1,6 @@
 <!-- Scripts JavaScript -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="_js/modern.js"></script>
 <script src="_functions/cookies.js"></script>
 <script>
     // Initialiser le système de cookies RGPD
