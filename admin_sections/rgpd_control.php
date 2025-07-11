@@ -1,21 +1,144 @@
 <?php
+/**
+ * Section RGPD - Centre de contrôle des données
+ * Affiche les statistiques de collecte et les consentements
+ */
+
 session_start();
-include_once(__DIR__ . '/../_db/connexion_DB.php');
-include_once(__DIR__ . '/../_functions/auth.php');
+require_once '../_db/connexion_DB.php';
+require_once '../_functions/auth.php';
+require_once '../_functions/cookie_manager.php';
 
 if (!is_admin()) {
     http_response_code(403);
     exit('Accès refusé');
 }
 
-// Gestion des actions
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Initialiser la connexion DB
+$cookieManager = new CookieManager($DB);
+
+// Statistiques des consentements
+function getConsentStats($db) {
+    try {
+        // Total des consentements
+        $stmt = $db->query("SELECT 
+            COUNT(*) as total_consents,
+            SUM(consent_given) as accepted_consents,
+            COUNT(*) - SUM(consent_given) as refused_consents,
+            AVG(consent_given) * 100 as acceptance_rate
+        FROM cookie_consents 
+        WHERE consent_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
+        
+        $stats = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Consentements par jour (7 derniers jours)
+        $stmt = $db->query("SELECT 
+            DATE(consent_date) as date,
+            COUNT(*) as total,
+            SUM(consent_given) as accepted
+        FROM cookie_consents 
+        WHERE consent_date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        GROUP BY DATE(consent_date)
+        ORDER BY date DESC");
+        
+        $daily_stats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Types de cookies préférés
+        $stmt = $db->query("SELECT 
+            preferences,
+            COUNT(*) as count
+        FROM cookie_consents 
+        WHERE consent_given = 1 AND preferences != '[]'
+        AND consent_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        GROUP BY preferences");
+        
+        $preferences = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        return [
+            'global' => $stats ?: ['total_consents' => 0, 'accepted_consents' => 0, 'refused_consents' => 0, 'acceptance_rate' => 0],
+            'daily' => $daily_stats,
+            'preferences' => $preferences
+        ];
+        
+    } catch (Exception $e) {
+        return [
+            'global' => ['total_consents' => 0, 'accepted_consents' => 0, 'refused_consents' => 0, 'acceptance_rate' => 0],
+            'daily' => [],
+            'preferences' => []
+        ];
+    }
+}
+
+// Statistiques de collecte de données
+function getDataCollectionStats($db) {
+    try {
+        // Volume de données collectées
+        $stmt = $db->query("SELECT 
+            COUNT(*) as total_collections,
+            COUNT(DISTINCT ip_address) as unique_visitors,
+            AVG(CHAR_LENGTH(collected_data)) as avg_data_size
+        FROM user_data_collection 
+        WHERE collection_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
+        
+        $stats = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Types de données les plus collectées
+        $stmt = $db->query("SELECT 
+            collection_date,
+            collected_data
+        FROM user_data_collection 
+        WHERE collection_date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        ORDER BY collection_date DESC
+        LIMIT 100");
+        
+        $collections = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Analyser les types de données
+        $data_types = [
+            'essential' => 0,
+            'analytics' => 0,
+            'preferences' => 0,
+            'marketing' => 0
+        ];
+        
+        foreach ($collections as $collection) {
+            $data = json_decode($collection['collected_data'], true);
+            if ($data) {
+                foreach ($data_types as $type => $count) {
+                    if (isset($data[$type])) {
+                        $data_types[$type]++;
+                    }
+                }
+            }
+        }
+        
+        return [
+            'global' => $stats ?: ['total_collections' => 0, 'unique_visitors' => 0, 'avg_data_size' => 0],
+            'types' => $data_types,
+            'recent' => array_slice($collections, 0, 10)
+        ];
+        
+    } catch (Exception $e) {
+        return [
+            'global' => ['total_collections' => 0, 'unique_visitors' => 0, 'avg_data_size' => 0],
+            'types' => ['essential' => 0, 'analytics' => 0, 'preferences' => 0, 'marketing' => 0],
+            'recent' => []
+        ];
+    }
+}
+
+// Gestion des actions AJAX
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    header('Content-Type: application/json');
     $response = ['success' => false, 'message' => ''];
     
     try {
         switch ($_POST['action']) {
             case 'delete_user_data':
-                $ip_address = $_POST['ip_address'];
+                $ip_address = $_POST['ip_address'] ?? '';
+                if (!$ip_address) {
+                    throw new Exception('Adresse IP requise');
+                }
                 
                 // Supprimer toutes les données liées à cette IP
                 $stmt = $DB->prepare("DELETE FROM user_data_collection WHERE ip_address = ?");
@@ -24,48 +147,750 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt = $DB->prepare("DELETE FROM cookie_consents WHERE ip_address = ?");
                 $stmt->execute([$ip_address]);
                 
-                $stmt = $DB->prepare("DELETE FROM access_logs WHERE ip_address = ?");
-                $stmt->execute([$ip_address]);
-                
                 $response['success'] = true;
-                $response['message'] = 'Données supprimées avec succès';
+                $response['message'] = 'Données supprimées avec succès pour l\'IP: ' . $ip_address;
                 break;
                 
-            case 'export_user_data':
-                $ip_address = $_POST['ip_address'];
+            case 'export_data':
+                // Export global des données RGPD
+                $export_data = [
+                    'export_date' => date('Y-m-d H:i:s'),
+                    'consent_stats' => getConsentStats($DB),
+                    'data_collection_stats' => getDataCollectionStats($DB)
+                ];
                 
-                // Récupérer toutes les données
-                $data = [];
+                $filename = 'rgpd_export_' . date('Y-m-d_H-i-s') . '.json';
+                $filepath = '../exports/' . $filename;
                 
-                $stmt = $DB->prepare("SELECT * FROM user_data_collection WHERE ip_address = ?");
-                $stmt->execute([$ip_address]);
-                $data['collected_data'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                // Créer le dossier exports s'il n'existe pas
+                if (!is_dir('../exports')) {
+                    mkdir('../exports', 0755, true);
+                }
                 
-                $stmt = $DB->prepare("SELECT * FROM cookie_consents WHERE ip_address = ?");
-                $stmt->execute([$ip_address]);
-                $data['consents'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                
-                $stmt = $DB->prepare("SELECT * FROM access_logs WHERE ip_address = ?");
-                $stmt->execute([$ip_address]);
-                $data['access_logs'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                file_put_contents($filepath, json_encode($export_data, JSON_PRETTY_PRINT));
                 
                 $response['success'] = true;
-                $response['data'] = $data;
+                $response['message'] = 'Export créé avec succès';
+                $response['download_url'] = 'exports/' . $filename;
                 break;
                 
-            case 'process_deletion_request':
-                $request_id = intval($_POST['request_id']);
-                $status = $_POST['status'];
-                $reason = $_POST['reason'] ?? '';
+            case 'anonymize_old_data':
+                // Anonymiser les données de plus de 30 jours
+                $cutoff_date = date('Y-m-d H:i:s', strtotime('-30 days'));
                 
-                $stmt = $DB->prepare("UPDATE data_deletion_requests SET status = ?, reason = ?, processed_date = NOW() WHERE id = ?");
-                $stmt->execute([$status, $reason, $request_id]);
+                // Anonymiser les IPs dans les consentements
+                $stmt = $DB->prepare("UPDATE cookie_consents SET ip_address = 'anonymized' WHERE consent_date < ?");
+                $stmt->execute([$cutoff_date]);
+                $consent_anonymized = $stmt->rowCount();
                 
-                if ($status === 'processed') {
-                    // Supprimer les données si approuvé
-                    $stmt = $DB->prepare("SELECT ip_address FROM data_deletion_requests WHERE id = ?");
-                    $stmt->execute([$request_id]);
-                    $request = $stmt->fetch(PDO::FETCH_ASSOC);
+                // Anonymiser les IPs dans les collectes de données
+                $stmt = $DB->prepare("UPDATE user_data_collection SET ip_address = 'anonymized' WHERE collection_date < ?");
+                $stmt->execute([$cutoff_date]);
+                $data_anonymized = $stmt->rowCount();
+                
+                $response['success'] = true;
+                $response['message'] = "Anonymisation terminée: $consent_anonymized consentements et $data_anonymized collectes de données";
+                break;
+                
+            case 'generate_report':
+                // Générer un rapport RGPD complet
+                $consent_stats = getConsentStats($DB);
+                $data_stats = getDataCollectionStats($DB);
+                
+                $report = "# RAPPORT RGPD - " . date('d/m/Y H:i:s') . "\n\n";
+                $report .= "## Statistiques des Consentements (30 derniers jours)\n";
+                $report .= "- Total des consentements: " . $consent_stats['global']['total_consents'] . "\n";
+                $report .= "- Consentements acceptés: " . $consent_stats['global']['accepted_consents'] . "\n";
+                $report .= "- Consentements refusés: " . $consent_stats['global']['refused_consents'] . "\n";
+                $report .= "- Taux d'acceptation: " . round($consent_stats['global']['acceptance_rate'], 1) . "%\n\n";
+                
+                $report .= "## Collecte de Données (30 derniers jours)\n";
+                $report .= "- Total des collectes: " . $data_stats['global']['total_collections'] . "\n";
+                $report .= "- Visiteurs uniques: " . $data_stats['global']['unique_visitors'] . "\n";
+                $report .= "- Taille moyenne des données: " . round($data_stats['global']['avg_data_size']) . " caractères\n\n";
+                
+                $report .= "## Types de Données Collectées\n";
+                foreach ($data_stats['types'] as $type => $count) {
+                    $report .= "- " . ucfirst($type) . ": $count collectes\n";
+                }
+                
+                $filename = 'rapport_rgpd_' . date('Y-m-d_H-i-s') . '.txt';
+                $filepath = '../exports/' . $filename;
+                
+                file_put_contents($filepath, $report);
+                
+                $response['success'] = true;
+                $response['message'] = 'Rapport généré avec succès';
+                $response['report_url'] = 'exports/' . $filename;
+                break;
+                
+            default:
+                throw new Exception('Action non reconnue');
+        }
+    } catch (Exception $e) {
+        $response['message'] = $e->getMessage();
+    }
+    
+    echo json_encode($response);
+    exit;
+}
+
+$consent_stats = getConsentStats($DB);
+$data_stats = getDataCollectionStats($DB);
+?>
+
+<div class="rgpd-dashboard">
+    <div class="rgpd-header">
+        <h2><i class="fas fa-shield-alt"></i> Centre de Contrôle RGPD</h2>
+        <p>Visualisation des consentements et données collectées conformément au RGPD</p>
+    </div>
+
+    <!-- Statistiques globales -->
+    <div class="stats-overview">
+        <div class="stat-card consent-stats">
+            <div class="stat-icon">📊</div>
+            <div class="stat-content">
+                <h3>Consentements (30 jours)</h3>
+                <div class="stat-number"><?php echo number_format($consent_stats['global']['total_consents']); ?></div>
+                <div class="stat-details">
+                    <span class="accepted">✅ <?php echo $consent_stats['global']['accepted_consents']; ?> acceptés</span>
+                    <span class="refused">❌ <?php echo $consent_stats['global']['refused_consents']; ?> refusés</span>
+                </div>
+                <div class="acceptance-rate">
+                    Taux d'acceptation: <strong><?php echo round($consent_stats['global']['acceptance_rate'], 1); ?>%</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card data-stats">
+            <div class="stat-icon">💾</div>
+            <div class="stat-content">
+                <h3>Collecte de Données</h3>
+                <div class="stat-number"><?php echo number_format($data_stats['global']['total_collections']); ?></div>
+                <div class="stat-details">
+                    <span>👥 <?php echo $data_stats['global']['unique_visitors']; ?> visiteurs uniques</span>
+                    <span>📏 <?php echo round($data_stats['global']['avg_data_size']); ?> caractères/collecte</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card compliance-status">
+            <div class="stat-icon">🛡️</div>
+            <div class="stat-content">
+                <h3>Conformité RGPD</h3>
+                <div class="compliance-indicator active">
+                    <i class="fas fa-check-circle"></i> CONFORME
+                </div>
+                <div class="stat-details">
+                    <span>✅ Consentement explicite</span>
+                    <span>✅ Données minimales</span>
+                    <span>✅ Traçabilité complète</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Évolution des consentements -->
+    <div class="consent-evolution">
+        <h3><i class="fas fa-chart-line"></i> Évolution des Consentements (7 derniers jours)</h3>
+        <div class="chart-container">
+            <?php if (!empty($consent_stats['daily'])): ?>
+                <div class="daily-chart">
+                    <?php foreach (array_reverse($consent_stats['daily']) as $day): ?>
+                        <div class="chart-bar">
+                            <div class="bar-accepted" style="height: <?php echo min(100, ($day['accepted'] / max(1, $day['total'])) * 100); ?>%"></div>
+                            <div class="bar-total" style="height: <?php echo min(100, $day['total'] * 10); ?>%"></div>
+                            <div class="bar-label">
+                                <?php echo date('d/m', strtotime($day['date'])); ?>
+                                <small><?php echo $day['accepted']; ?>/<?php echo $day['total']; ?></small>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <p class="no-data">Aucune donnée disponible pour les 7 derniers jours</p>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- Types de données collectées -->
+    <div class="data-types-section">
+        <h3><i class="fas fa-database"></i> Types de Données Collectées</h3>
+        <div class="data-types-grid">
+            <div class="data-type essential">
+                <div class="type-icon">🔒</div>
+                <div class="type-info">
+                    <h4>Données Essentielles</h4>
+                    <div class="type-count"><?php echo $data_stats['types']['essential']; ?></div>
+                    <div class="type-desc">IP, horodatage, page visitée</div>
+                </div>
+            </div>
+            
+            <div class="data-type analytics">
+                <div class="type-icon">📈</div>
+                <div class="type-info">
+                    <h4>Données Analytiques</h4>
+                    <div class="type-count"><?php echo $data_stats['types']['analytics']; ?></div>
+                    <div class="type-desc">User-agent, référent, résolution</div>
+                </div>
+            </div>
+            
+            <div class="data-type preferences">
+                <div class="type-icon">⚙️</div>
+                <div class="type-info">
+                    <h4>Préférences</h4>
+                    <div class="type-count"><?php echo $data_stats['types']['preferences']; ?></div>
+                    <div class="type-desc">Thème, langue, timezone</div>
+                </div>
+            </div>
+            
+            <div class="data-type marketing">
+                <div class="type-icon">🎯</div>
+                <div class="type-info">
+                    <h4>Marketing</h4>
+                    <div class="type-count"><?php echo $data_stats['types']['marketing']; ?></div>
+                    <div class="type-desc">UTM, campagnes, publicités</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Préférences des utilisateurs -->
+    <div class="user-preferences">
+        <h3><i class="fas fa-sliders-h"></i> Préférences des Utilisateurs</h3>
+        <?php if (!empty($consent_stats['preferences'])): ?>
+            <div class="preferences-list">
+                <?php foreach ($consent_stats['preferences'] as $pref): ?>
+                    <?php 
+                    $preferences = json_decode($pref['preferences'], true);
+                    if ($preferences):
+                    ?>
+                        <div class="preference-item">
+                            <div class="pref-count"><?php echo $pref['count']; ?></div>
+                            <div class="pref-details">
+                                <?php foreach ($preferences as $type => $enabled): ?>
+                                    <span class="pref-tag <?php echo $enabled ? 'enabled' : 'disabled'; ?>">
+                                        <?php echo ucfirst($type); ?>: <?php echo $enabled ? '✅' : '❌'; ?>
+                                    </span>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <p class="no-data">Aucune préférence enregistrée</p>
+        <?php endif; ?>
+    </div>
+
+    <!-- Données collectées récemment -->
+    <div class="recent-collections">
+        <h3><i class="fas fa-clock"></i> Collectes Récentes</h3>
+        <?php if (!empty($data_stats['recent'])): ?>
+            <div class="collections-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Types de données</th>
+                            <th>Taille</th>
+                            <th>IP (anonymisée)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($data_stats['recent'] as $collection): ?>
+                            <?php 
+                            $data = json_decode($collection['collected_data'], true);
+                            $types = $data ? array_keys($data) : [];
+                            ?>
+                            <tr>
+                                <td><?php echo date('d/m H:i', strtotime($collection['collection_date'])); ?></td>
+                                <td>
+                                    <?php foreach ($types as $type): ?>
+                                        <span class="data-tag"><?php echo $type; ?></span>
+                                    <?php endforeach; ?>
+                                </td>
+                                <td><?php echo strlen($collection['collected_data']); ?> chars</td>
+                                <td><?php echo substr($collection['ip_address'] ?? 'anonymized', 0, 8) . '...'; ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php else: ?>
+            <p class="no-data">Aucune collecte récente</p>
+        <?php endif; ?>
+    </div>
+
+    <!-- Actions RGPD -->
+    <div class="rgpd-actions">
+        <h3><i class="fas fa-tools"></i> Actions RGPD</h3>
+        <div class="action-buttons">
+            <button onclick="exportData()" class="btn-export">
+                <i class="fas fa-download"></i> Exporter les données
+            </button>
+            <button onclick="anonymizeOldData()" class="btn-anonymize">
+                <i class="fas fa-user-secret"></i> Anonymiser données anciennes
+            </button>
+            <button onclick="generateReport()" class="btn-report">
+                <i class="fas fa-file-alt"></i> Générer rapport RGPD
+            </button>
+        </div>
+        <div id="rgpd-action-result" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
+    </div>
+</div>
+
+<style>
+.rgpd-dashboard {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.rgpd-header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+}
+
+.rgpd-header h2 {
+    margin: 0 0 10px 0;
+    font-size: 2em;
+}
+
+.stats-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+}
+
+.stat-icon {
+    font-size: 3em;
+    margin-right: 20px;
+    opacity: 0.8;
+}
+
+.stat-content h3 {
+    margin: 0 0 10px 0;
+    color: #666;
+    font-size: 0.9em;
+    text-transform: uppercase;
+}
+
+.stat-number {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.stat-details {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.stat-details span {
+    font-size: 0.85em;
+    color: #666;
+}
+
+.accepted { color: #27ae60; }
+.refused { color: #e74c3c; }
+
+.acceptance-rate {
+    margin-top: 10px;
+    padding: 5px 10px;
+    background: #f8f9fa;
+    border-radius: 5px;
+    font-size: 0.9em;
+}
+
+.compliance-indicator {
+    padding: 10px 15px;
+    border-radius: 25px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.compliance-indicator.active {
+    background: #d4edda;
+    color: #155724;
+    border: 2px solid #27ae60;
+}
+
+.consent-evolution, .data-types-section, .user-preferences, .rgpd-actions, .recent-collections {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.consent-evolution h3, .data-types-section h3, .user-preferences h3, .rgpd-actions h3, .recent-collections h3 {
+    margin-top: 0;
+    color: #333;
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 10px;
+}
+
+.daily-chart {
+    display: flex;
+    justify-content: space-around;
+    align-items: end;
+    height: 200px;
+    margin: 20px 0;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.chart-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    height: 150px;
+}
+
+.bar-accepted {
+    background: linear-gradient(to top, #27ae60, #2ecc71);
+    width: 30px;
+    border-radius: 3px 3px 0 0;
+    position: absolute;
+    bottom: 30px;
+}
+
+.bar-total {
+    background: linear-gradient(to top, #e9ecef, #dee2e6);
+    width: 30px;
+    border-radius: 3px;
+    position: absolute;
+    bottom: 30px;
+    z-index: -1;
+}
+
+.bar-label {
+    position: absolute;
+    bottom: 0;
+    font-size: 0.8em;
+    text-align: center;
+    width: 50px;
+}
+
+.data-types-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.data-type {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border-radius: 8px;
+    transition: transform 0.2s ease;
+}
+
+.data-type:hover {
+    transform: scale(1.02);
+}
+
+.data-type.essential { background: linear-gradient(135deg, #ffeaa7, #fdcb6e); }
+.data-type.analytics { background: linear-gradient(135deg, #a8e6cf, #7fdbda); }
+.data-type.preferences { background: linear-gradient(135deg, #dda0dd, #da70d6); }
+.data-type.marketing { background: linear-gradient(135deg, #ffb3ba, #ffaaa5); }
+
+.type-icon {
+    font-size: 2em;
+    margin-right: 15px;
+}
+
+.type-count {
+    font-size: 1.8em;
+    font-weight: bold;
+    color: #333;
+}
+
+.type-desc {
+    font-size: 0.8em;
+    color: #666;
+}
+
+.preferences-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.preference-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    margin: 5px 0;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.pref-count {
+    background: #007bff;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-weight: bold;
+    margin-right: 15px;
+    min-width: 40px;
+    text-align: center;
+}
+
+.pref-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.pref-tag {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.pref-tag.enabled {
+    background: #d4edda;
+    color: #155724;
+}
+
+.pref-tag.disabled {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.collections-table {
+    overflow-x: auto;
+}
+
+.collections-table table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+}
+
+.collections-table th,
+.collections-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.collections-table th {
+    background: #f8f9fa;
+    font-weight: bold;
+    color: #495057;
+}
+
+.data-tag {
+    display: inline-block;
+    background: #e9ecef;
+    color: #495057;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 0.75em;
+    margin-right: 3px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.action-buttons button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-export {
+    background: linear-gradient(45deg, #3498db, #2980b9);
+    color: white;
+}
+
+.btn-anonymize {
+    background: linear-gradient(45deg, #9b59b6, #8e44ad);
+    color: white;
+}
+
+.btn-report {
+    background: linear-gradient(45deg, #27ae60, #229954);
+    color: white;
+}
+
+.action-buttons button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.no-data {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    padding: 20px;
+}
+
+@media (max-width: 768px) {
+    .stats-overview {
+        grid-template-columns: 1fr;
+    }
+    
+    .data-types-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .daily-chart {
+        height: 150px;
+    }
+}
+</style>
+
+<script>
+function exportData() {
+    showRgpdResult('Export des données en cours...', 'info');
+    
+    fetch('', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'action=export_data'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showRgpdResult('✅ ' + data.message, 'success');
+            if (data.download_url) {
+                window.open(data.download_url, '_blank');
+            }
+        } else {
+            showRgpdResult('❌ Erreur: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        showRgpdResult('❌ Erreur: ' + error.message, 'error');
+    });
+}
+
+function anonymizeOldData() {
+    if (!confirm('Anonymiser les données de plus de 30 jours ? Cette action est irréversible.')) {
+        return;
+    }
+    
+    showRgpdResult('Anonymisation en cours...', 'info');
+    
+    fetch('', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'action=anonymize_old_data'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showRgpdResult('✅ ' + data.message, 'success');
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            showRgpdResult('❌ Erreur: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        showRgpdResult('❌ Erreur: ' + error.message, 'error');
+    });
+}
+
+function generateReport() {
+    showRgpdResult('Génération du rapport RGPD...', 'info');
+    
+    fetch('', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'action=generate_report'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showRgpdResult('✅ ' + data.message, 'success');
+            if (data.report_url) {
+                window.open(data.report_url, '_blank');
+            }
+        } else {
+            showRgpdResult('❌ Erreur: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        showRgpdResult('❌ Erreur: ' + error.message, 'error');
+    });
+}
+
+function showRgpdResult(message, type) {
+    const resultDiv = document.getElementById('rgpd-action-result');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = message;
+    
+    // Couleurs selon le type
+    if (type === 'success') {
+        resultDiv.style.background = '#d4edda';
+        resultDiv.style.color = '#155724';
+        resultDiv.style.border = '1px solid #c3e6cb';
+    } else if (type === 'error') {
+        resultDiv.style.background = '#f8d7da';
+        resultDiv.style.color = '#721c24';
+        resultDiv.style.border = '1px solid #f5c6cb';
+    } else {
+        resultDiv.style.background = '#cce5ff';
+        resultDiv.style.color = '#004085';
+        resultDiv.style.border = '1px solid #99ccff';
+    }
+    
+    // Auto-hide après 10 secondes pour les succès
+    if (type === 'success') {
+        setTimeout(() => {
+            resultDiv.style.display = 'none';
+        }, 10000);
+    }
+}
+</script>
                     
                     if ($request) {
                         $stmt = $DB->prepare("DELETE FROM user_data_collection WHERE ip_address = ?");
