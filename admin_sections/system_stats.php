@@ -159,6 +159,70 @@ $stats = RaspberryPiStats::getAllStats();
         </div>
     </div>
 
+    <!-- Actions système -->
+    <div class="system-actions" style="margin-top: 30px; background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <h3 style="margin-top: 0; color: #333; border-bottom: 2px solid #e9ecef; padding-bottom: 10px;">
+            <i class="fas fa-cogs"></i> Actions Système
+        </h3>
+        <div class="action-buttons" style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 20px;">
+            <button onclick="restartServer()" class="btn-restart" style="
+                background: linear-gradient(45deg, #e74c3c, #c0392b);
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: bold;
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 14px;
+            ">
+                <i class="fas fa-power-off"></i>
+                Redémarrer le serveur
+            </button>
+            
+            <button onclick="clearCache()" class="btn-cache" style="
+                background: linear-gradient(45deg, #f39c12, #e67e22);
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: bold;
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 14px;
+            ">
+                <i class="fas fa-broom"></i>
+                Vider le cache
+            </button>
+            
+            <button onclick="checkDiskSpace()" class="btn-disk" style="
+                background: linear-gradient(45deg, #3498db, #2980b9);
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: bold;
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 14px;
+            ">
+                <i class="fas fa-hdd"></i>
+                Analyser l'espace disque
+            </button>
+        </div>
+        
+        <div id="action-result" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
+    </div>
+
     <!-- Bouton de rafraîchissement -->
     <div class="refresh-section">
         <button onclick="refreshSystemStats()" class="refresh-btn">
@@ -313,6 +377,50 @@ $stats = RaspberryPiStats::getAllStats();
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
+/* Styles pour les boutons d'action */
+.btn-restart:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+}
+
+.btn-cache:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(243, 156, 18, 0.4);
+}
+
+.btn-disk:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+}
+
+.action-buttons button:active {
+    transform: translateY(0);
+}
+
+.success-message {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.error-message {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.warning-message {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.loading-message {
+    background: #cce5ff;
+    color: #004085;
+    border: 1px solid #99ccff;
+}
+
 .refresh-section small {
     color: #6c757d;
     display: block;
@@ -360,6 +468,101 @@ function refreshSystemStats() {
             button.disabled = false;
             alert('Erreur lors de l\'actualisation');
         });
+}
+
+// Fonction pour redémarrer le serveur
+function restartServer() {
+    if (!confirm('⚠️ Êtes-vous sûr de vouloir redémarrer le serveur ? Cette action va interrompre temporairement le service.')) {
+        return;
+    }
+    
+    showActionResult('Redémarrage du serveur en cours...', 'loading');
+    
+    fetch('ajax/server_actions.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'action=restart'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showActionResult('✅ Commande de redémarrage envoyée. Le serveur va redémarrer dans quelques secondes.', 'success');
+        } else {
+            showActionResult('❌ Erreur: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        showActionResult('❌ Erreur de communication: ' + error.message, 'error');
+    });
+}
+
+// Fonction pour vider le cache
+function clearCache() {
+    if (!confirm('Vider le cache du système ?')) {
+        return;
+    }
+    
+    showActionResult('Nettoyage du cache en cours...', 'loading');
+    
+    fetch('ajax/server_actions.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'action=clear_cache'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showActionResult('✅ Cache vidé avec succès. ' + data.details, 'success');
+        } else {
+            showActionResult('❌ Erreur: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        showActionResult('❌ Erreur: ' + error.message, 'error');
+    });
+}
+
+// Fonction pour analyser l'espace disque
+function checkDiskSpace() {
+    showActionResult('Analyse de l\'espace disque en cours...', 'loading');
+    
+    fetch('ajax/server_actions.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'action=check_disk'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showActionResult('📊 ' + data.details, 'success');
+        } else {
+            showActionResult('❌ Erreur: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        showActionResult('❌ Erreur: ' + error.message, 'error');
+    });
+}
+
+// Fonction pour afficher les résultats des actions
+function showActionResult(message, type) {
+    const resultDiv = document.getElementById('action-result');
+    resultDiv.className = type + '-message';
+    resultDiv.innerHTML = message;
+    resultDiv.style.display = 'block';
+    
+    // Masquer automatiquement après 10 secondes pour les messages de succès
+    if (type === 'success') {
+        setTimeout(() => {
+            resultDiv.style.display = 'none';
+        }, 10000);
+    }
 }
 
 // Auto-refresh toutes les 30 secondes

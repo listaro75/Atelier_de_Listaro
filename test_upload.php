@@ -54,4 +54,107 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <button type="submit">Tester l'upload</button>
 </form>
 
+<div style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+    <h2>🔧 Actions Serveur :</h2>
+    <button onclick="restartServer()" style="
+        background: linear-gradient(45deg, #e74c3c, #c0392b);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        margin-right: 10px;
+    ">
+        🔄 Redémarrer le serveur
+    </button>
+    
+    <button onclick="clearCache()" style="
+        background: linear-gradient(45deg, #f39c12, #e67e22);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+    ">
+        🧹 Vider le cache
+    </button>
+    
+    <div id="action-result" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
+</div>
+
+<script>
+function restartServer() {
+    if (!confirm('⚠️ Redémarrer le serveur ? Cela va interrompre temporairement le service.')) {
+        return;
+    }
+    
+    showResult('Redémarrage en cours...', 'info');
+    
+    fetch('ajax/server_actions.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'action=restart'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showResult('✅ ' + data.message + (data.details ? ' - ' + data.details : ''), 'success');
+        } else {
+            showResult('❌ Erreur: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        showResult('❌ Erreur: ' + error.message, 'error');
+    });
+}
+
+function clearCache() {
+    showResult('Nettoyage du cache...', 'info');
+    
+    fetch('ajax/server_actions.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'action=clear_cache'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showResult('✅ ' + data.message + (data.details ? ' - ' + data.details : ''), 'success');
+        } else {
+            showResult('❌ Erreur: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        showResult('❌ Erreur: ' + error.message, 'error');
+    });
+}
+
+function showResult(message, type) {
+    const resultDiv = document.getElementById('action-result');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = message;
+    
+    // Couleurs selon le type
+    if (type === 'success') {
+        resultDiv.style.background = '#d4edda';
+        resultDiv.style.color = '#155724';
+        resultDiv.style.border = '1px solid #c3e6cb';
+    } else if (type === 'error') {
+        resultDiv.style.background = '#f8d7da';
+        resultDiv.style.color = '#721c24';
+        resultDiv.style.border = '1px solid #f5c6cb';
+    } else {
+        resultDiv.style.background = '#cce5ff';
+        resultDiv.style.color = '#004085';
+        resultDiv.style.border = '1px solid #99ccff';
+    }
+}
+</script>
+
 <p><a href="admin_panel.php">← Retour au panel</a></p>
