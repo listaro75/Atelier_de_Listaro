@@ -128,38 +128,21 @@
                     $error_msg = "Erreur lors de la mise à jour du produit.";
                 }
             } elseif ($_POST['action'] === 'delete' && isset($_POST['product_id'])) {
-                try {
-                    $DB->beginTransaction();
+                include_once('_functions/image_utils.php');
+                
+                $result = deleteProductWithImages($_POST['product_id'], $DB);
+                
+                if ($result['success']) {
+                    $success_msg = $result['message'] . " ({$result['total_images']} images supprimées)";
                     
-                    // Récupérer les images du produit avant suppression
-                    $stmt = $DB->prepare("SELECT image_path FROM product_images WHERE product_id = ?");
-                    $stmt->execute([$_POST['product_id']]);
-                    $images = $stmt->fetchAll();
-                    
-                    // Supprimer les fichiers images
-                    foreach ($images as $image) {
-                        if (file_exists($image['image_path'])) {
-                            unlink($image['image_path']);
-                        }
-                    }
-                    
-                    // Supprimer d'abord les images de la base
-                    $stmt = $DB->prepare("DELETE FROM product_images WHERE product_id = ?");
-                    $stmt->execute([$_POST['product_id']]);
-                    
-                    // Supprimer les likes du produit
-                    $stmt = $DB->prepare("DELETE FROM product_likes WHERE product_id = ?");
-                    $stmt->execute([$_POST['product_id']]);
-                    
-                    // Supprimer le produit
-                    $stmt = $DB->prepare("DELETE FROM products WHERE id = ?");
-                    if ($stmt->execute([$_POST['product_id']])) {
-                        $DB->commit();
-                        $success_msg = "Produit supprimé avec succès !";
-                        
-                        // Forcer la sortie pour éviter les problèmes de cache
-                        echo json_encode(['success' => true, 'message' => $success_msg]);
-                        exit();
+                    // Forcer la sortie pour éviter les problèmes de cache
+                    echo json_encode(['success' => true, 'message' => $success_msg]);
+                    exit();
+                } else {
+                    $error_msg = $result['message'];
+                    echo json_encode(['success' => false, 'message' => $error_msg]);
+                    exit();
+                }
                     } else {
                         $DB->rollback();
                         $error_msg = "Erreur lors de la suppression du produit.";

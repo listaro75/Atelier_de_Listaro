@@ -122,4 +122,86 @@ function getImageStats($DB) {
     
     return $stats;
 }
+
+/**
+ * Supprime un produit et toutes ses images associées de manière sécurisée
+ */
+function deleteProductWithImages($product_id, $DB) {
+    try {
+        $DB->beginTransaction();
+        
+        // 1. Récupérer toutes les images du produit
+        $stmt = $DB->prepare("SELECT image_path FROM product_images WHERE product_id = ?");
+        $stmt->execute([$product_id]);
+        $images = $stmt->fetchAll();
+        
+        $deleted_files = [];
+        $failed_files = [];
+        
+        // 2. Supprimer les fichiers images du serveur
+        foreach ($images as $image) {
+            $file_path = __DIR__ . '/../' . $image['image_path'];
+            if (file_exists($file_path)) {
+                if (unlink($file_path)) {
+                    $deleted_files[] = $image['image_path'];
+                    error_log("✅ Image supprimée : " . $file_path);
+                } else {
+                    $failed_files[] = $image['image_path'];
+                    error_log("❌ Échec suppression : " . $file_path);
+                }
+            } else {
+                // Fichier déjà absent, mais on le note
+                error_log("⚠️ Fichier déjà absent : " . $file_path);
+            }
+        }
+        
+        // 3. Supprimer les entrées d'images de la base de données
+        $stmt = $DB->prepare("DELETE FROM product_images WHERE product_id = ?");
+        $stmt->execute([$product_id]);
+        
+        // 4. Supprimer les likes du produit (si table existe)
+        try {
+            $stmt = $DB->prepare("DELETE FROM product_likes WHERE product_id = ?");
+            $stmt->execute([$product_id]);
+        } catch (Exception $e) {
+            // Table product_likes pourrait ne pas exister
+            error_log("Note: table product_likes non trouvée ou erreur : " . $e->getMessage());
+        }
+        
+        // 5. Supprimer les éléments de panier (si table existe)
+        try {
+            $stmt = $DB->prepare("DELETE FROM cart WHERE product_id = ?");
+            $stmt->execute([$product_id]);
+        } catch (Exception $e) {
+            // Table cart pourrait ne pas exister
+            error_log("Note: table cart non trouvée ou erreur : " . $e->getMessage());
+        }
+        
+        // 6. Supprimer le produit lui-même
+        $stmt = $DB->prepare("DELETE FROM products WHERE id = ?");
+        if (!$stmt->execute([$product_id])) {
+            throw new Exception("Erreur lors de la suppression du produit en base");
+        }
+        
+        $DB->commit();
+        
+        return [
+            'success' => true,
+            'message' => 'Produit supprimé avec succès',
+            'deleted_files' => $deleted_files,
+            'failed_files' => $failed_files,
+            'total_images' => count($images)
+        ];
+        
+    } catch (Exception $e) {
+        $DB->rollback();
+        error_log("❌ Erreur lors de la suppression du produit $product_id : " . $e->getMessage());
+        
+        return [
+            'success' => false,
+            'message' => 'Erreur lors de la suppression : ' . $e->getMessage(),
+            'error' => $e->getMessage()
+        ];
+    }
+}
 ?>

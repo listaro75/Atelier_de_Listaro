@@ -140,41 +140,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 break;
                 
             case 'delete_product':
+                include_once(__DIR__ . '/../_functions/image_utils.php');
                 $product_id = intval($_POST['product_id']);
                 
-                try {
-                    $DB->beginTransaction();
-                    
-                    // Supprimer les images du serveur
-                    $stmt = $DB->prepare("SELECT image_path FROM product_images WHERE product_id = ?");
-                    $stmt->execute([$product_id]);
-                    $images = $stmt->fetchAll();
-                    
-                    foreach ($images as $image) {
-                        $image_file = __DIR__ . '/../' . $image['image_path'];
-                        if (file_exists($image_file)) {
-                            unlink($image_file);
-                        }
-                    }
-                    
-                    // Supprimer les images de la base de données
-                    $stmt = $DB->prepare("DELETE FROM product_images WHERE product_id = ?");
-                    $stmt->execute([$product_id]);
-                    
-                    // Supprimer le produit
-                    $stmt = $DB->prepare("DELETE FROM products WHERE id = ?");
-                    if ($stmt->execute([$product_id])) {
-                        $DB->commit();
-                        $response['success'] = true;
-                        $response['message'] = 'Produit supprimé avec succès';
-                    } else {
-                        $DB->rollback();
-                        $response['message'] = 'Erreur lors de la suppression du produit';
-                    }
-                } catch (Exception $e) {
-                    $DB->rollback();
-                    $response['message'] = 'Erreur: ' . $e->getMessage();
-                }
+                $result = deleteProductWithImages($product_id, $DB);
+                $response['success'] = $result['success'];
+                $response['message'] = $result['message'];
                 break;
                 
             case 'delete_image':
