@@ -2,7 +2,7 @@
 @media (max-width: 768px) {
     /* Supprimer les marges du container principal */
     .main-container {
-        padding: 20px 0 10px 0 !important;
+        padding: 80px 0 10px 0 !important;
         margin: 0 !important;
         width: 100% !important;
     }
@@ -131,6 +131,8 @@
         font-size: 14px;
         padding: 8px 12px;
         width: 100%;
+        border-radius: 25px !important;
+        border: 1px solid #e0e0e0;
     }
     
     /* Réduire la taille du bouton ajouter au panier */
