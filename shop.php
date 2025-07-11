@@ -60,6 +60,7 @@
         require_once('_head/script.php');
     ?>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="_css/mobile-shop.css">
 </head>
 <body>
     <?php require_once('_menu/menu.php'); ?>

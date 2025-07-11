@@ -1,0 +1,97 @@
+/* Configuration mobile pour shop - 2 produits par ligne */
+@media (max-width: 768px) {
+    .products-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+        padding: 0 10px !important;
+    }
+    
+    .product-card {
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s ease;
+        background: white;
+    }
+    
+    .product-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .product-images {
+        border-radius: 12px 12px 0 0;
+        overflow: hidden;
+        aspect-ratio: 1;
+    }
+    
+    .product-image,
+    .product-image-placeholder {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .product-info {
+        padding: 12px 10px;
+    }
+    
+    .product-name {
+        font-size: 14px !important;
+        line-height: 1.3;
+        margin-bottom: 6px;
+        font-weight: 500;
+        color: #1d1d1f;
+        /* Limitation à 2 lignes */
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .product-price {
+        font-size: 16px !important;
+        font-weight: 600;
+        color: #000;
+        margin-top: 8px;
+    }
+    
+    /* Optimisation des filtres sur mobile */
+    .shop-container {
+        padding: 15px 10px;
+    }
+    
+    .filters {
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .search-bar,
+    .category-filter,
+    .sort-filter {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}
+
+/* Configuration pour très petits écrans (320px) */
+@media (max-width: 320px) {
+    .products-grid {
+        gap: 8px !important;
+        padding: 0 5px !important;
+    }
+    
+    .product-info {
+        padding: 8px 6px;
+    }
+    
+    .product-name {
+        font-size: 13px !important;
+    }
+    
+    .product-price {
+        font-size: 15px !important;
+    }
+}
