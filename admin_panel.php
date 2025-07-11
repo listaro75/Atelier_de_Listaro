@@ -798,7 +798,10 @@ try {
         // Fonction pour charger le contenu d'une section
         function loadSectionContent(sectionName) {
             const contentDiv = document.getElementById(sectionName + '-content');
-            if (!contentDiv) return;
+            if (!contentDiv) {
+                console.error('Content div not found for section:', sectionName);
+                return;
+            }
             
             // Afficher le loader
             contentDiv.innerHTML = `
@@ -807,6 +810,44 @@ try {
                     <p>Chargement...</p>
                 </div>
             `;
+            
+            // URL de la section - utiliser la version corrigée pour les produits
+            const url = sectionName === 'products' ? 
+                `admin_sections/products_corrected.php` : 
+                `admin_sections/${sectionName}.php`;
+            console.log('Loading section:', url);
+            
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then(data => {
+                    contentDiv.innerHTML = data;
+                    sectionsLoaded[sectionName] = true;
+                    
+                    // Actions spéciales selon la section
+                    if (sectionName === 'newsletter') {
+                        loadNewsletterContent();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading section:', error);
+                    contentDiv.innerHTML = `
+                        <div style="text-align: center; padding: 50px; color: #e74c3c;">
+                            <i class="fas fa-exclamation-triangle" style="font-size: 2em; margin-bottom: 15px;"></i>
+                            <h3>Erreur de chargement</h3>
+                            <p>Impossible de charger la section ${sectionName}</p>
+                            <p style="font-size: 12px; opacity: 0.7;">Erreur: ${error.message}</p>
+                            <button onclick="loadSectionContent('${sectionName}')" style="margin-top: 10px; padding: 10px 15px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                                Réessayer
+                            </button>
+                        </div>
+                    `;
+                });
+        }
             
             // Charger le contenu via AJAX
             fetch(`admin_sections/${sectionName}.php`)
@@ -1042,17 +1083,6 @@ try {
         function loadNewsletterContent() {
             loadNewsletterStats();
             loadNewsletterSubscribers();
-        }
-
-        // Intercepter le chargement de la section newsletter
-        const originalLoadSectionContent = loadSectionContent;
-        function loadSectionContent(sectionName) {
-            if (sectionName === 'newsletter') {
-                sectionsLoaded.newsletter = true;
-                loadNewsletterContent();
-            } else {
-                originalLoadSectionContent(sectionName);
-            }
         }
     </script>
 </body>
