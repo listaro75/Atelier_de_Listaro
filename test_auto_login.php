@@ -23,14 +23,14 @@ try {
             $_SESSION['id'] = $admin['id'];
             $_SESSION['user_id'] = $admin['id'];
             $_SESSION['pseudo'] = $admin['pseudo'];
-            $_SESSION['email'] = $admin['email'];
+            $_SESSION['mail'] = $admin['mail'];
             $_SESSION['role'] = $admin['role'];
             $_SESSION['is_admin'] = true;
             
             echo "<div style='background: #e6ffe6; border: 1px solid green; padding: 15px; margin: 10px 0;'>";
             echo "<h2 style='color: green;'>✅ Connexion admin réussie !</h2>";
             echo "<p><strong>Utilisateur :</strong> " . htmlspecialchars($admin['pseudo']) . "</p>";
-            echo "<p><strong>Email :</strong> " . htmlspecialchars($admin['email']) . "</p>";
+            echo "<p><strong>Email :</strong> " . htmlspecialchars($admin['mail']) . "</p>";
             echo "<p><strong>Role :</strong> " . htmlspecialchars($admin['role']) . "</p>";
             echo "<p><strong>Session ID :</strong> " . session_id() . "</p>";
             echo "</div>";

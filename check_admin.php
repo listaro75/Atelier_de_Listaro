@@ -28,7 +28,7 @@ try {
     
     // Vérifier les utilisateurs existants
     echo "<h2>Utilisateurs existants :</h2>";
-    $stmt = $DB->query("SELECT id, pseudo, email, role FROM user");
+    $stmt = $DB->query("SELECT id, pseudo, mail, role FROM user");
     $users = $stmt->fetchAll();
     
     if (count($users) > 0) {
@@ -38,7 +38,7 @@ try {
             echo "<tr>";
             echo "<td>" . htmlspecialchars($user['id']) . "</td>";
             echo "<td>" . htmlspecialchars($user['pseudo']) . "</td>";
-            echo "<td>" . htmlspecialchars($user['email']) . "</td>";
+            echo "<td>" . htmlspecialchars($user['mail']) . "</td>";
             echo "<td>" . htmlspecialchars($user['role']) . "</td>";
             echo "</tr>";
         }
@@ -56,14 +56,16 @@ try {
     if ($admin_count['count'] == 0) {
         echo "<h2 style='color: orange;'>🚨 Aucun administrateur trouvé - Création d'un admin</h2>";
         
-        // Créer un utilisateur admin
+        // Créer un utilisateur admin avec les bons noms de colonnes
         $admin_pseudo = 'admin';
-        $admin_email = 'admin@atelierdelistaro.fr';
+        $admin_nom = 'Administrateur';
+        $admin_prenom = 'Site';
+        $admin_mail = 'admin@atelierdelistaro.fr';
         $admin_password = password_hash('admin123', PASSWORD_DEFAULT);
         $admin_role = 'admin';
         
-        $stmt = $DB->prepare("INSERT INTO user (pseudo, email, password, role) VALUES (?, ?, ?, ?)");
-        if ($stmt->execute([$admin_pseudo, $admin_email, $admin_password, $admin_role])) {
+        $stmt = $DB->prepare("INSERT INTO user (pseudo, nom, prenom, mail, mdp, role) VALUES (?, ?, ?, ?, ?, ?)");
+        if ($stmt->execute([$admin_pseudo, $admin_nom, $admin_prenom, $admin_mail, $admin_password, $admin_role])) {
             echo "<p style='color: green;'>✅ Administrateur créé avec succès !</p>";
             echo "<div style='background: #e6ffe6; border: 1px solid green; padding: 10px; margin: 10px 0;'>";
             echo "<strong>Identifiants administrateur :</strong><br>";
