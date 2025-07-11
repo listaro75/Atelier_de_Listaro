@@ -640,9 +640,19 @@ function filterProducts() {
     }
 }
 
-// Filtrer en temps réel
-document.getElementById('search-input').addEventListener('input', filterProducts);
-document.getElementById('category-filter').addEventListener('change', filterProducts);
+// Filtrer en temps réel - éviter les doublons d'event listeners
+const searchInput = document.getElementById('search-input');
+const categoryFilter = document.getElementById('category-filter');
+
+if (searchInput && !searchInput.hasAttribute('data-listener-added')) {
+    searchInput.addEventListener('input', filterProducts);
+    searchInput.setAttribute('data-listener-added', 'true');
+}
+
+if (categoryFilter && !categoryFilter.hasAttribute('data-listener-added')) {
+    categoryFilter.addEventListener('change', filterProducts);
+    categoryFilter.setAttribute('data-listener-added', 'true');
+}
 
 // Modifier un produit
 function editProduct(id) {
@@ -687,7 +697,7 @@ function deleteProduct(id) {
     formData.append('action', 'delete_product');
     formData.append('product_id', id);
     
-    fetch('products.php', {
+    fetch('', {
         method: 'POST',
         body: formData,
         headers: {
@@ -711,8 +721,10 @@ function deleteProduct(id) {
     });
 }
 
-// Gestion du formulaire d'ajout
-document.getElementById('product-form').addEventListener('submit', function(e) {
+// Gestion du formulaire d'ajout - éviter les doublons
+const productForm = document.getElementById('product-form');
+if (productForm && !productForm.hasAttribute('data-listener-added')) {
+    productForm.addEventListener('submit', function(e) {
     e.preventDefault();
     
     const formData = new FormData(this);
@@ -737,10 +749,13 @@ document.getElementById('product-form').addEventListener('submit', function(e) {
         console.error('Erreur:', error);
         alert('Une erreur est survenue');
     });
-});
+    productForm.setAttribute('data-listener-added', 'true');
+}
 
 // Gestion du formulaire d'édition
-document.getElementById('edit-form').addEventListener('submit', function(e) {
+const editForm = document.getElementById('edit-form');
+if (editForm && !editForm.hasAttribute('data-listener-added')) {
+    editForm.addEventListener('submit', function(e) {
     e.preventDefault();
     
     const formData = new FormData(this);
@@ -765,7 +780,8 @@ document.getElementById('edit-form').addEventListener('submit', function(e) {
         console.error('Erreur:', error);
         alert('Une erreur est survenue');
     });
-});
+    editForm.setAttribute('data-listener-added', 'true');
+}
 
 // Fermer le modal en cliquant à l'extérieur
 window.onclick = function(event) {
@@ -898,7 +914,7 @@ function removeEditPreviewImage(btn, index) {
 
 // Fonction pour charger les images existantes d'un produit
 function loadCurrentImages(productId) {
-    fetch(`admin_sections/get_product_images.php?id=${productId}`)
+    fetch(`get_product_images.php?id=${productId}`)
         .then(response => response.json())
         .then(images => {
             const container = document.getElementById('current-images');

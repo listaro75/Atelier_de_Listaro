@@ -818,9 +818,13 @@ try {
                     // Exécuter les scripts contenus dans le HTML chargé
                     const scripts = contentDiv.querySelectorAll('script');
                     scripts.forEach(script => {
-                        const newScript = document.createElement('script');
-                        newScript.textContent = script.textContent;
-                        document.head.appendChild(newScript);
+                        // Créer un nouveau script et l'exécuter dans le contexte local
+                        try {
+                            const scriptFunction = new Function(script.textContent);
+                            scriptFunction();
+                        } catch (error) {
+                            console.error('Erreur lors de l\'exécution du script:', error);
+                        }
                     });
                 })
                 .catch(error => {
