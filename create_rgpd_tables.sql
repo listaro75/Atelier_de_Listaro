@@ -1,5 +1,12 @@
 -- Tables pour le système RGPD
 -- À exécuter dans votre base de données MySQL
+-- Version corrigée avec vérifications
+
+-- Supprimer les tables existantes si elles existent (optionnel, décommentez si besoin)
+-- DROP TABLE IF EXISTS `rgpd_action_logs`;
+-- DROP TABLE IF EXISTS `data_deletion_requests`;
+-- DROP TABLE IF EXISTS `user_data_collection`;
+-- DROP TABLE IF EXISTS `cookie_consents`;
 
 -- Table pour les consentements des cookies
 CREATE TABLE IF NOT EXISTS `cookie_consents` (
