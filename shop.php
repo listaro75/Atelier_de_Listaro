@@ -1,6 +1,7 @@
 <?php
     include_once('_db/connexion_DB.php');
     include_once('_functions/auth.php');
+    include_once('_functions/image_utils.php');
     session_start();
 
     // Récupération des catégories pour le filtre
@@ -128,11 +129,22 @@
                                     
                                     if(!empty($images)): ?>
                                         <div class="image-slider">
-                                            <?php foreach($images as $index => $image): ?>
-                                                <img src="<?php echo htmlspecialchars($image['image_path']); ?>" 
-                                                     alt="<?php echo htmlspecialchars($product['name']); ?>" 
-                                                     class="product-image <?php echo $index === 0 ? 'active' : ''; ?>"
-                                                     data-index="<?php echo $index; ?>">
+                                            <?php foreach($images as $index => $image): 
+                                                $imageUrl = getImageUrl($image['image_path']);
+                                                ?>
+                                                <?php if ($imageUrl === createPlaceholderImageUrl()): ?>
+                                                    <div class="product-image-placeholder <?php echo $index === 0 ? 'active' : ''; ?>" 
+                                                         data-index="<?php echo $index; ?>">
+                                                        Aucune image
+                                                    </div>
+                                                <?php else: ?>
+                                                    <img src="<?php echo htmlspecialchars($imageUrl); ?>" 
+                                                         alt="<?php echo htmlspecialchars($product['name']); ?>" 
+                                                         class="product-image <?php echo $index === 0 ? 'active' : ''; ?>"
+                                                         data-index="<?php echo $index; ?>"
+                                                         loading="lazy"
+                                                         onerror="this.style.display='none'; this.parentNode.querySelector('.product-image-placeholder')?.style.setProperty('display', 'flex');">
+                                                <?php endif; ?>
                                             <?php endforeach; ?>
                                         </div>
                                         <?php if(count($images) > 1): ?>
@@ -145,6 +157,10 @@
                                                 <?php endforeach; ?>
                                             </div>
                                         <?php endif; ?>
+                                    <?php else: ?>
+                                        <div class="product-image-placeholder">
+                                            Aucune image disponible
+                                        </div>
                                     <?php endif; ?>
                                 </div>
                                 <div class="product-info">

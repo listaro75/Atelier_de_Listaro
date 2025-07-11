@@ -204,4 +204,72 @@ function deleteProductWithImages($product_id, $DB) {
         ];
     }
 }
+
+/**
+ * Obtient l'URL de l'image avec fallback
+ */
+function getImageUrl($imagePath, $defaultImage = null) {
+    if (empty($imagePath)) {
+        return $defaultImage ?: createPlaceholderImageUrl();
+    }
+    
+    // Vérifier si le fichier existe
+    $fullPath = __DIR__ . '/../' . $imagePath;
+    if (!file_exists($fullPath)) {
+        return $defaultImage ?: createPlaceholderImageUrl();
+    }
+    
+    return $imagePath;
+}
+
+/**
+ * Génère le HTML pour une image de produit avec fallback
+ */
+function renderProductImage($imagePath, $alt = 'Image produit', $class = 'product-image') {
+    if (empty($imagePath) || !file_exists(__DIR__ . '/../' . $imagePath)) {
+        return '<div class="product-image-placeholder">Aucune image</div>';
+    }
+    
+    return '<img src="' . htmlspecialchars($imagePath) . '" 
+                 alt="' . htmlspecialchars($alt) . '" 
+                 class="' . htmlspecialchars($class) . '" 
+                 onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\';" 
+                 loading="lazy">
+            <div class="product-image-placeholder" style="display: none;">Image non disponible</div>';
+}
+
+/**
+ * Vérifie si le dossier d'upload existe et le crée si nécessaire
+ */
+function ensureUploadDir($dir = 'uploads/products') {
+    $fullPath = __DIR__ . '/../' . $dir;
+    
+    if (!is_dir($fullPath)) {
+        if (!mkdir($fullPath, 0755, true)) {
+            return false;
+        }
+    }
+    
+    // Vérifier les permissions
+    if (!is_writable($fullPath)) {
+        chmod($fullPath, 0755);
+    }
+    
+    return true;
+}
+
+/**
+ * Crée une URL d'image placeholder SVG
+ */
+function createPlaceholderImageUrl($width = 300, $height = 200, $text = 'No Image') {
+    $svg = '<?xml version="1.0" encoding="UTF-8"?>
+<svg width="' . $width . '" height="' . $height . '" viewBox="0 0 ' . $width . ' ' . $height . '" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="#f0f0f0"/>
+    <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="16" fill="#666" text-anchor="middle" dy=".3em">' . $text . '</text>
+    <circle cx="' . ($width/2 - 20) . '" cy="' . ($height/2 - 20) . '" r="15" fill="#ddd"/>
+    <path d="M' . ($width/2 - 25) . ',' . ($height/2 - 15) . ' L' . ($width/2 - 15) . ',' . ($height/2 - 25) . ' L' . ($width/2 - 10) . ',' . ($height/2 - 20) . ' L' . ($width/2 - 5) . ',' . ($height/2 - 10) . ' L' . ($width/2 + 5) . ',' . ($height/2) . ' L' . ($width/2 - 25) . ',' . ($height/2) . ' Z" fill="#bbb"/>
+</svg>';
+    
+    return 'data:image/svg+xml;base64,' . base64_encode($svg);
+}
 ?>

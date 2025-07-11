@@ -2,6 +2,7 @@
 session_start();
 include_once(__DIR__ . '/../_db/connexion_DB.php');
 include_once(__DIR__ . '/../_functions/auth.php');
+include_once(__DIR__ . '/../_functions/image_utils.php');
 
 if (!is_admin()) {
     http_response_code(403);
@@ -480,22 +481,30 @@ try {
                     $stmt = $DB->prepare("SELECT COUNT(*) FROM product_images WHERE product_id = ?");
                     $stmt->execute([$product['id']]);
                     $image_count = $stmt->fetchColumn();
+                    
+                    // Utiliser la fonction getImageUrl pour gérer les images manquantes
+                    $imageUrl = getImageUrl($main_image);
+                    $isPlaceholder = ($imageUrl === createPlaceholderImageUrl());
                     ?>
                     <tr data-category="<?php echo htmlspecialchars($product['category']); ?>" 
                         data-name="<?php echo htmlspecialchars(strtolower($product['name'])); ?>">
                         <td><?php echo $product['id']; ?></td>
                         <td style="position: relative;">
-                            <?php if ($main_image): ?>
-                                <img src="<?php echo htmlspecialchars($main_image); ?>" 
+                            <?php if (!$isPlaceholder): ?>
+                                <img src="<?php echo htmlspecialchars($imageUrl); ?>" 
                                      alt="<?php echo htmlspecialchars($product['name']); ?>"
-                                     style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
+                                     style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div style="width: 50px; height: 50px; background: #f0f0f0; border-radius: 4px; display: none; align-items: center; justify-content: center; position: relative; font-size: 12px; color: #666;">
+                                    <i class="fas fa-image" style="color: #ccc;"></i>
+                                </div>
                                 <?php if ($image_count > 1): ?>
                                     <div style="position: absolute; top: -5px; right: -5px; background: #3498db; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; display: flex; align-items: center; justify-content: center; font-weight: bold;">
                                         <?php echo $image_count; ?>
                                     </div>
                                 <?php endif; ?>
                             <?php else: ?>
-                                <div style="width: 50px; height: 50px; background: #f0f0f0; border-radius: 4px; display: flex; align-items: center; justify-content: center; position: relative;">
+                                <div style="width: 50px; height: 50px; background: #f0f0f0; border-radius: 4px; display: flex; align-items: center; justify-content: center; position: relative; font-size: 12px; color: #666;">
                                     <i class="fas fa-image" style="color: #ccc;"></i>
                                     <?php if ($image_count > 0): ?>
                                         <div style="position: absolute; top: -5px; right: -5px; background: #3498db; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; display: flex; align-items: center; justify-content: center; font-weight: bold;">

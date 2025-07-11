@@ -1,0 +1,81 @@
+/* Styles pour les images de produits avec fallback */
+
+.product-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
+    transition: transform 0.3s ease;
+}
+
+.product-image:hover {
+    transform: scale(1.05);
+}
+
+/* Image par défaut si pas d'image */
+.product-image-placeholder {
+    width: 100%;
+    height: 200px;
+    background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    color: #666;
+    font-size: 14px;
+    text-align: center;
+}
+
+.product-image-placeholder::before {
+    content: "📷";
+    font-size: 48px;
+    margin-bottom: 10px;
+    opacity: 0.5;
+}
+
+/* Amélioration pour les images qui ne se chargent pas */
+.product-image[src=""],
+.product-image[src*="uploads/products/"] {
+    background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%);
+}
+
+/* Spinner de chargement */
+.image-loading {
+    position: relative;
+    background: #f0f0f0;
+}
+
+.image-loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 30px;
+    height: 30px;
+    margin: -15px 0 0 -15px;
+    border: 3px solid #ddd;
+    border-top: 3px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive pour les images */
+@media (max-width: 768px) {
+    .product-image,
+    .product-image-placeholder {
+        height: 150px;
+    }
+}
+
+@media (max-width: 480px) {
+    .product-image,
+    .product-image-placeholder {
+        height: 200px;
+    }
+}
