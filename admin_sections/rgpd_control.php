@@ -20,37 +20,38 @@ $cookieManager = new CookieManager($DB);
 // Statistiques des consentements
 function getConsentStats($db) {
     try {
-        // Total des consentements
+        // Total des consentements avec la structure existante
         $stmt = $db->query("SELECT 
             COUNT(*) as total_consents,
-            SUM(consent_given) as accepted_consents,
-            COUNT(*) - SUM(consent_given) as refused_consents,
-            AVG(consent_given) * 100 as acceptance_rate
+            SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as accepted_consents,
+            COUNT(*) - SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as refused_consents,
+            AVG(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) * 100 as acceptance_rate
         FROM cookie_consents 
-        WHERE consent_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
+        WHERE date_created >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
         
         $stats = $stmt->fetch(PDO::FETCH_ASSOC);
         
         // Consentements par jour (7 derniers jours)
         $stmt = $db->query("SELECT 
-            DATE(consent_date) as date,
+            DATE(date_created) as date,
             COUNT(*) as total,
-            SUM(consent_given) as accepted
+            SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as accepted
         FROM cookie_consents 
-        WHERE consent_date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-        GROUP BY DATE(consent_date)
+        WHERE date_created >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        GROUP BY DATE(date_created)
         ORDER BY date DESC");
         
         $daily_stats = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Types de cookies préférés
+        // Types de données dans les consentements
         $stmt = $db->query("SELECT 
-            preferences,
+            consent_data,
             COUNT(*) as count
         FROM cookie_consents 
-        WHERE consent_given = 1 AND preferences != '[]'
-        AND consent_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-        GROUP BY preferences");
+        WHERE is_active = 1 AND consent_data IS NOT NULL AND consent_data != ''
+        AND date_created >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        GROUP BY consent_data
+        LIMIT 10");
         
         $preferences = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
@@ -72,28 +73,43 @@ function getConsentStats($db) {
 // Statistiques de collecte de données
 function getDataCollectionStats($db) {
     try {
-        // Volume de données collectées
+        // Volume de données collectées avec la structure existante
         $stmt = $db->query("SELECT 
             COUNT(*) as total_collections,
             COUNT(DISTINCT ip_address) as unique_visitors,
-            AVG(CHAR_LENGTH(collected_data)) as avg_data_size
+            AVG(CHAR_LENGTH(data_content)) as avg_data_size
         FROM user_data_collection 
-        WHERE collection_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
+        WHERE date_created >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
         
         $stats = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        // Types de données les plus collectées
+        // Collectes récentes
         $stmt = $db->query("SELECT 
-            collection_date,
-            collected_data
+            date_created,
+            data_type,
+            data_content,
+            ip_address,
+            page_url,
+            referer
         FROM user_data_collection 
-        WHERE collection_date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-        ORDER BY collection_date DESC
+        WHERE date_created >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        ORDER BY date_created DESC
         LIMIT 100");
         
         $collections = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Analyser les types de données
+        $stmt = $db->query("SELECT 
+            data_type,
+            COUNT(*) as count
+        FROM user_data_collection 
+        WHERE date_created >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        GROUP BY data_type
+        ORDER BY count DESC");
+        
+        $data_types_raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Mapper vers les catégories RGPD
         $data_types = [
             'essential' => 0,
             'analytics' => 0,
@@ -101,20 +117,28 @@ function getDataCollectionStats($db) {
             'marketing' => 0
         ];
         
-        foreach ($collections as $collection) {
-            $data = json_decode($collection['collected_data'], true);
-            if ($data) {
-                foreach ($data_types as $type => $count) {
-                    if (isset($data[$type])) {
-                        $data_types[$type]++;
-                    }
-                }
+        foreach ($data_types_raw as $type) {
+            $type_name = strtolower($type['data_type']);
+            $count = $type['count'];
+            
+            if (in_array($type_name, ['session', 'essential', 'security', 'functional'])) {
+                $data_types['essential'] += $count;
+            } elseif (in_array($type_name, ['analytics', 'tracking', 'statistics', 'performance'])) {
+                $data_types['analytics'] += $count;
+            } elseif (in_array($type_name, ['preferences', 'settings', 'customization'])) {
+                $data_types['preferences'] += $count;
+            } elseif (in_array($type_name, ['marketing', 'advertising', 'promotion', 'campaign'])) {
+                $data_types['marketing'] += $count;
+            } else {
+                // Par défaut, considérer comme analytique
+                $data_types['analytics'] += $count;
             }
         }
         
         return [
             'global' => $stats ?: ['total_collections' => 0, 'unique_visitors' => 0, 'avg_data_size' => 0],
             'types' => $data_types,
+            'types_raw' => $data_types_raw,
             'recent' => array_slice($collections, 0, 10)
         ];
         
@@ -122,6 +146,7 @@ function getDataCollectionStats($db) {
         return [
             'global' => ['total_collections' => 0, 'unique_visitors' => 0, 'avg_data_size' => 0],
             'types' => ['essential' => 0, 'analytics' => 0, 'preferences' => 0, 'marketing' => 0],
+            'types_raw' => [],
             'recent' => []
         ];
     }
@@ -140,24 +165,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     throw new Exception('Adresse IP requise');
                 }
                 
-                // Supprimer toutes les données liées à cette IP
+                // Supprimer toutes les données liées à cette IP avec la structure existante
                 $stmt = $DB->prepare("DELETE FROM user_data_collection WHERE ip_address = ?");
                 $stmt->execute([$ip_address]);
+                $data_deleted = $stmt->rowCount();
                 
                 $stmt = $DB->prepare("DELETE FROM cookie_consents WHERE ip_address = ?");
                 $stmt->execute([$ip_address]);
+                $consents_deleted = $stmt->rowCount();
+                
+                // Log de l'action RGPD pour traçabilité
+                $stmt = $DB->prepare("INSERT INTO rgpd_action_logs (action_type, target_ip, admin_user, details, date_created) 
+                    VALUES ('deletion', ?, ?, ?, NOW())");
+                $stmt->execute([
+                    $ip_address, 
+                    $_SESSION['user_id'], 
+                    "Suppression manuelle: $consents_deleted consentements, $data_deleted collectes"
+                ]);
                 
                 $response['success'] = true;
                 $response['message'] = 'Données supprimées avec succès pour l\'IP: ' . $ip_address;
+                $response['details'] = "$consents_deleted consentements et $data_deleted collectes supprimés";
                 break;
                 
             case 'export_data':
-                // Export global des données RGPD
+                // Export global des données RGPD avec la structure existante
                 $export_data = [
                     'export_date' => date('Y-m-d H:i:s'),
+                    'type' => 'Données RGPD complètes',
+                    'requested_by' => $_SESSION['user_id'] ?? 'admin',
                     'consent_stats' => getConsentStats($DB),
                     'data_collection_stats' => getDataCollectionStats($DB)
                 ];
+                
+                // Ajouter statistiques détaillées par période
+                $stmt = $DB->query("SELECT 
+                    DATE(date_created) as date,
+                    COUNT(*) as total_consents,
+                    SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as accepted_consents,
+                    ROUND(AVG(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) * 100, 2) as acceptance_rate
+                FROM cookie_consents 
+                WHERE date_created >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                GROUP BY DATE(date_created)
+                ORDER BY date DESC");
+                
+                $export_data['daily_consent_trends'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                // Types de données collectées récemment
+                $stmt = $DB->query("SELECT 
+                    data_type,
+                    COUNT(*) as count,
+                    COUNT(DISTINCT ip_address) as unique_users,
+                    MIN(date_created) as first_collection,
+                    MAX(date_created) as last_collection
+                FROM user_data_collection 
+                WHERE date_created >= DATE_SUB(NOW(), INTERVAL 30 DAY) 
+                GROUP BY data_type
+                ORDER BY count DESC");
+                
+                $export_data['data_types_analysis'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 
                 $filename = 'rgpd_export_' . date('Y-m-d_H-i-s') . '.json';
                 $filepath = '../exports/' . $filename;
@@ -167,26 +233,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     mkdir('../exports', 0755, true);
                 }
                 
-                file_put_contents($filepath, json_encode($export_data, JSON_PRETTY_PRINT));
+                $json_data = json_encode($export_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                file_put_contents($filepath, $json_data);
                 
                 $response['success'] = true;
                 $response['message'] = 'Export créé avec succès';
                 $response['download_url'] = 'exports/' . $filename;
+                $response['file_size'] = number_format(filesize($filepath) / 1024, 2) . ' KB';
                 break;
                 
             case 'anonymize_old_data':
-                // Anonymiser les données de plus de 30 jours
+                // Anonymiser les données de plus de 30 jours avec la structure existante
                 $cutoff_date = date('Y-m-d H:i:s', strtotime('-30 days'));
                 
-                // Anonymiser les IPs dans les consentements
-                $stmt = $DB->prepare("UPDATE cookie_consents SET ip_address = 'anonymized' WHERE consent_date < ?");
+                // Anonymiser les IPs dans les consentements (utiliser date_created au lieu de consent_date)
+                $stmt = $DB->prepare("UPDATE cookie_consents 
+                    SET ip_address = CONCAT('anon_', RIGHT(MD5(ip_address), 8)) 
+                    WHERE date_created < ? AND ip_address NOT LIKE 'anon_%'");
                 $stmt->execute([$cutoff_date]);
                 $consent_anonymized = $stmt->rowCount();
                 
-                // Anonymiser les IPs dans les collectes de données
-                $stmt = $DB->prepare("UPDATE user_data_collection SET ip_address = 'anonymized' WHERE collection_date < ?");
+                // Anonymiser les IPs dans les collectes de données (utiliser date_created au lieu de collection_date)
+                $stmt = $DB->prepare("UPDATE user_data_collection 
+                    SET ip_address = CONCAT('anon_', RIGHT(MD5(ip_address), 8))
+                    WHERE date_created < ? AND ip_address NOT LIKE 'anon_%'");
                 $stmt->execute([$cutoff_date]);
                 $data_anonymized = $stmt->rowCount();
+                
+                // Anonymiser aussi les user_agents si présents
+                $stmt = $DB->prepare("UPDATE cookie_consents 
+                    SET user_agent = 'anonymized' 
+                    WHERE date_created < ? AND user_agent != 'anonymized'");
+                $stmt->execute([$cutoff_date]);
+                
+                $stmt = $DB->prepare("UPDATE user_data_collection 
+                    SET user_agent = 'anonymized' 
+                    WHERE date_created < ? AND user_agent != 'anonymized'");
+                $stmt->execute([$cutoff_date]);
                 
                 $response['success'] = true;
                 $response['message'] = "Anonymisation terminée: $consent_anonymized consentements et $data_anonymized collectes de données";
