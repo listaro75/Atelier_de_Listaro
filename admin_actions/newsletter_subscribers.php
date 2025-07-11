@@ -17,8 +17,8 @@ if (!is_admin()) {
 try {
     // Récupérer les abonnés newsletter
     $stmt = $DB->prepare("
-        SELECT id, username, email, created_at 
-        FROM users 
+        SELECT id, pseudo as username, mail as email, created_at 
+        FROM user 
         WHERE newsletter = 1 
         ORDER BY created_at DESC
     ");

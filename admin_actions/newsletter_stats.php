@@ -17,7 +17,7 @@ if (!is_admin()) {
 
 try {
     // Compter les abonnés newsletter
-    $stmt = $DB->prepare("SELECT COUNT(*) as count FROM users WHERE newsletter = 1");
+    $stmt = $DB->prepare("SELECT COUNT(*) as count FROM user WHERE newsletter = 1");
     $stmt->execute();
     $subscribers = $stmt->fetchColumn();
     

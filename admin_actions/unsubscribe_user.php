@@ -40,7 +40,7 @@ if ($user_id <= 0) {
 
 try {
     // Vérifier que l'utilisateur existe et est abonné
-    $stmt = $DB->prepare("SELECT username, email FROM users WHERE id = ? AND newsletter = 1");
+    $stmt = $DB->prepare("SELECT pseudo as username, mail as email FROM user WHERE id = ? AND newsletter = 1");
     $stmt->execute([$user_id]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
     
@@ -50,7 +50,7 @@ try {
     }
     
     // Désabonner l'utilisateur
-    $stmt = $DB->prepare("UPDATE users SET newsletter = 0 WHERE id = ?");
+    $stmt = $DB->prepare("UPDATE user SET newsletter = 0 WHERE id = ?");
     $stmt->execute([$user_id]);
     
     if ($stmt->rowCount() > 0) {

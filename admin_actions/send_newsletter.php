@@ -76,11 +76,11 @@ try {
     } else {
         // Mode production - envoyer à tous les abonnés
         $stmt = $DB->prepare("
-            SELECT email, username 
-            FROM users 
+            SELECT mail as email, pseudo as username 
+            FROM user 
             WHERE newsletter = 1 
-            AND email IS NOT NULL 
-            AND email != ''
+            AND mail IS NOT NULL 
+            AND mail != ''
         ");
         $stmt->execute();
         $subscribers = $stmt->fetchAll(PDO::FETCH_ASSOC);

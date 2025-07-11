@@ -17,7 +17,7 @@ try {
     $stmt = $DB->query("SELECT COUNT(*) as count FROM prestations");
     $prestation_count = $stmt->fetchColumn();
     
-    $stmt = $DB->query("SELECT COUNT(*) as count FROM users");
+    $stmt = $DB->query("SELECT COUNT(*) as count FROM user");
     $user_count = $stmt->fetchColumn();
     
     $stmt = $DB->query("SELECT COUNT(*) as count FROM orders");
