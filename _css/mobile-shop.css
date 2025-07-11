@@ -1,11 +1,19 @@
 /* Configuration mobile pour shop - 2 produits par ligne compacts */
 @media (max-width: 768px) {
+    /* Supprimer les marges du container principal */
+    .main-container {
+        padding: 10px 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+    }
+    
     .products-grid {
         grid-template-columns: repeat(2, 1fr) !important;
         gap: 8px !important;
-        padding: 0 8px !important;
+        padding: 0 4px !important;
         justify-items: center;
-        align-items: start;
+        width: 100%;
+        max-width: 100vw;
     }
     
     .product-card {
@@ -13,8 +21,9 @@
         box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
         transition: transform 0.2s ease;
         background: white;
-        max-width: 180px;
-        margin: 0 auto;
+        width: 100%;
+        max-width: 190px;
+        margin: 0;
     }
     
     .product-card:hover {
@@ -38,7 +47,6 @@
     
     .product-info {
         padding: 8px 6px;
-        text-align: center;
     }
     
     .product-name {
@@ -66,8 +74,9 @@
     
     /* Optimisation des filtres sur mobile */
     .shop-container {
-        padding: 10px 8px;
-        text-align: center;
+        padding: 10px 4px;
+        width: 100%;
+        margin: 0;
     }
     
     .filters {
@@ -95,12 +104,13 @@
 @media (max-width: 320px) {
     .products-grid {
         gap: 6px !important;
-        padding: 0 4px !important;
+        padding: 0 2px !important;
         justify-items: center;
     }
     
     .product-card {
-        max-width: 150px;
+        max-width: 160px;
+        width: 100%;
     }
     
     .product-images {
@@ -109,7 +119,6 @@
     
     .product-info {
         padding: 6px 4px;
-        text-align: center;
     }
     
     .product-name {
