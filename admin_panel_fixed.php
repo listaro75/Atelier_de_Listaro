@@ -185,8 +185,10 @@ try {
                 </div>
             `;
             
-            // URL de la section
-            const url = `admin_sections/${sectionName}.php`;
+            // URL de la section - utiliser la version corrigée pour les produits
+            const url = sectionName === 'products' ? 
+                `admin_sections/products_corrected.php` : 
+                `admin_sections/${sectionName}.php`;
             console.log('Loading section:', url);
             
             // Charger le contenu via fetch

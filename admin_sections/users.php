@@ -1,5 +1,8 @@
 <?php
-session_start();
+// Version corrigée pour éviter les conflits de session
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 include_once(__DIR__ . '/../_db/connexion_DB.php');
 include_once(__DIR__ . '/../_functions/auth.php');
 
