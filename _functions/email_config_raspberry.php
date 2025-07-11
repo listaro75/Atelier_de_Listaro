@@ -7,15 +7,15 @@
 // CONFIGURATION SMTP - CHOISISSEZ UNE OPTION
 // =============================================================================
 
-// OPTION 1: Gmail avec domaine personnalisé (le plus simple)
-// Vous devez créer un compte Gmail et configurer votre domaine
+// OPTION 1: Gmail avec domaine personnalisé (SOLUTION RECOMMANDÉE)
+// Créez un mot de passe d'application Gmail: https://support.google.com/accounts/answer/185833
 /*
 $email_config = [
     'method' => 'smtp',
     'smtp_host' => 'smtp.gmail.com',
     'smtp_port' => 587,
-    'smtp_username' => 'noreply@atelierdelistaro.fr', // Votre email Gmail
-    'smtp_password' => 'votre-mot-de-passe-app', // Mot de passe d'application
+    'smtp_username' => 'votre-email@gmail.com', // Votre email Gmail
+    'smtp_password' => 'votre-mot-de-passe-app', // Mot de passe d'application (16 caractères)
     'smtp_encryption' => 'tls',
     'from_email' => 'noreply@atelierdelistaro.fr',
     'from_name' => 'Atelier de Listaro',
@@ -70,6 +70,28 @@ $email_config = [
     'from_name' => 'Atelier de Listaro',
     'reply_to' => 'contact@atelierdelistaro.fr'
 ];
+
+/*
+ * PROBLÈME DÉTECTÉ : Emails en queue mais non délivrés
+ * 
+ * SOLUTIONS RECOMMANDÉES :
+ * 
+ * 1. SOLUTION RAPIDE - Configurer Gmail comme relayhost :
+ *    sudo ./setup_gmail_smtp.sh
+ * 
+ * 2. ALTERNATIVE - Activer Gmail SMTP dans cette config :
+ *    - Décommentez la section OPTION 1 ci-dessus
+ *    - Ajoutez vos identifiants Gmail
+ *    - Changez method de 'local' à 'smtp'
+ * 
+ * 3. DIAGNOSTIC COMPLET :
+ *    sudo ./fix_queue_email.sh
+ * 
+ * 4. CONFIGURATION DNS requise pour Postfix local :
+ *    - MX: atelierdelistaro.fr → [IP_PUBLIQUE_RASPBERRY]
+ *    - A:  mail.atelierdelistaro.fr → [IP_PUBLIQUE_RASPBERRY]  
+ *    - SPF: v=spf1 ip4:[IP_PUBLIQUE_RASPBERRY] ~all
+ */
 
 // =============================================================================
 // FONCTIONS D'ENVOI
