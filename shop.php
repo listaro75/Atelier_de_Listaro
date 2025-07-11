@@ -186,7 +186,7 @@
                                             $likes_count = $stmt->fetchColumn();
                                         ?>
                                         <button class="btn-like <?php echo $liked ? 'liked' : ''; ?>" 
-                                                onclick="toggleLike(this, <?php echo $product['id']; ?>)"
+                                                onclick="return toggleLike(this, <?php echo $product['id']; ?>, event)"
                                                 <?php if(!is_logged()) echo 'title="Connectez-vous pour aimer ce produit"'; ?>>
                                             <i class="fas fa-heart"></i>
                                             <span class="likes-count"><?php echo $likes_count; ?></span>
@@ -299,7 +299,13 @@
     }
 
     // Fonction pour les likes
-    function toggleLike(button, productId) {
+    function toggleLike(button, productId, event = null) {
+        // Empêcher la propagation vers le lien parent
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        
         if (!isLoggedIn) {
             window.location.href = 'connexion.php';
             return;
@@ -328,9 +334,13 @@
                 setTimeout(() => {
                     button.querySelector('i').classList.remove('pulse');
                 }, 500);
+            } else {
+                console.error('Erreur:', data.message);
             }
         })
         .catch(error => console.error('Erreur:', error));
+        
+        return false; // Empêcher la propagation
     }
 
     // Initialisation du défilement automatique

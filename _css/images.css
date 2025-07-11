@@ -79,3 +79,84 @@
         height: 200px;
     }
 }
+
+/* Styles pour les boutons like */
+.btn-like {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 10; /* S'assurer qu'il soit au-dessus du lien */
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-like:hover {
+    background: rgba(255, 107, 107, 0.1);
+    transform: scale(1.1);
+}
+
+.btn-like.liked {
+    color: #ff6b6b;
+}
+
+.btn-like.liked .fa-heart {
+    color: #ff6b6b;
+    animation: heartbeat 0.6s ease-in-out;
+}
+
+.btn-like .fa-heart {
+    color: #ccc;
+    font-size: 16px;
+    transition: color 0.3s ease;
+}
+
+.btn-like .likes-count {
+    font-size: 12px;
+    font-weight: bold;
+    color: #666;
+    min-width: 15px;
+    text-align: center;
+}
+
+.btn-like.liked .likes-count {
+    color: #ff6b6b;
+}
+
+/* Animation pulse pour le cœur */
+.btn-like .fa-heart.pulse {
+    animation: pulse 0.5s ease-in-out;
+}
+
+@keyframes heartbeat {
+    0% { transform: scale(1); }
+    25% { transform: scale(1.3); }
+    50% { transform: scale(1.1); }
+    75% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.4); }
+    100% { transform: scale(1); }
+}
+
+/* S'assurer que le bouton like ne déclenche pas le lien */
+.product-link .btn-like {
+    pointer-events: auto;
+    position: relative;
+    z-index: 2;
+}
+
+/* Améliorer la zone de clic du bouton like */
+.product-actions .btn-like {
+    min-width: 50px;
+    min-height: 35px;
+    justify-content: center;
+    margin-right: 10px;
+}
