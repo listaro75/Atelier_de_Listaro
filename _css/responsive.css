@@ -111,6 +111,7 @@
     }
 }
 
+
 /* Paysage sur mobile */
 @media (max-height: 500px) and (orientation: landscape) {
     .navbar {
