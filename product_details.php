@@ -36,11 +36,17 @@ $images = $stmt->fetchAll();
         require_once('_head/script.php');
     ?>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="_css/mobile-product-details.css">
 </head>
 <body>
     <?php require_once('_menu/menu.php'); ?>
     
     <div class="main-container">
+        <!-- Bouton retour pour mobile -->
+        <button class="back-button" onclick="history.back()" title="Retour">
+            <i class="fas fa-arrow-left"></i>
+        </button>
+        
         <div class="product-details">
             <div class="product-details-container">
                 <div class="product-details-images">
