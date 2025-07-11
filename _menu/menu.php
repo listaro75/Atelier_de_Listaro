@@ -86,9 +86,45 @@ document.getElementById('popupOverlay').addEventListener('click', hideLoginPopup
 function toggleMenu() {
     const menu = document.getElementById('mobileMenu');
     const hamburger = document.querySelector('.hamburger-menu');
+    const body = document.body;
+    
     menu.classList.toggle('active');
     hamburger.classList.toggle('active');
+    
+    // Empêcher le scroll quand le menu est ouvert
+    if (menu.classList.contains('active')) {
+        body.style.overflow = 'hidden';
+    } else {
+        body.style.overflow = '';
+    }
 }
+
+// Fermer le menu mobile lors du clic sur un lien
+document.addEventListener('DOMContentLoaded', function() {
+    const mobileMenu = document.getElementById('mobileMenu');
+    const menuLinks = mobileMenu.querySelectorAll('a');
+    
+    menuLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            if (window.innerWidth <= 768) {
+                toggleMenu();
+            }
+        });
+    });
+});
+
+// Fermer le menu mobile lors du redimensionnement
+window.addEventListener('resize', function() {
+    const menu = document.getElementById('mobileMenu');
+    const hamburger = document.querySelector('.hamburger-menu');
+    const body = document.body;
+    
+    if (window.innerWidth > 768) {
+        menu.classList.remove('active');
+        hamburger.classList.remove('active');
+        body.style.overflow = '';
+    }
+});
 
 // Fonction pour le menu déroulant au clic
 function toggleDropdown(event) {
@@ -112,8 +148,10 @@ document.addEventListener('click', function(event) {
 });
 
 // Empêcher la fermeture immédiate lors du clic sur le menu
-document.getElementById('userDropdown').addEventListener('click', function(event) {
-    // Empêcher la propagation pour éviter la fermeture immédiate
-    event.stopPropagation();
-});
+if (document.getElementById('userDropdown')) {
+    document.getElementById('userDropdown').addEventListener('click', function(event) {
+        // Empêcher la propagation pour éviter la fermeture immédiate
+        event.stopPropagation();
+    });
+}
 </script>
