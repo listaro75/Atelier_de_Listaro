@@ -47,22 +47,28 @@
 
     .nav-main a {
         color: #1d1d1f;
-        font-size: 24px;
-        font-weight: 300;
-        padding: 20px 40px;
-        margin: 8px 0;
+        font-size: 20px;
+        font-weight: 400;
+        padding: 16px 32px;
+        margin: 6px 0;
         text-decoration: none;
-        border-radius: 8px;
+        border-radius: 25px;
         transition: all 0.3s ease;
-        min-width: 200px;
+        min-width: 160px;
+        max-width: 200px;
         text-align: center;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.3px;
+        border: 1px solid transparent;
+        background-color: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(10px);
     }
 
     .nav-main a:hover {
-        background-color: rgba(0, 0, 0, 0.05);
+        background-color: rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(0, 0, 0, 0.1);
         color: #000;
-        transform: translateX(4px);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
     /* Animation des liens du menu */
@@ -132,10 +138,12 @@
     }
 
     .nav-main a {
-        font-size: 22px;
-        padding: 18px 30px;
-        margin: 6px 0;
-        min-width: 180px;
+        font-size: 18px;
+        padding: 14px 28px;
+        margin: 5px 0;
+        min-width: 140px;
+        max-width: 180px;
+        border-radius: 20px;
     }
 
     .hamburger-menu {
