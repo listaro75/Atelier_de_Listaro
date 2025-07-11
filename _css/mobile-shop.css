@@ -2,9 +2,16 @@
 @media (max-width: 768px) {
     /* Supprimer les marges du container principal */
     .main-container {
-        padding: 10px 0 !important;
+        padding: 20px 0 10px 0 !important;
         margin: 0 !important;
         width: 100% !important;
+    }
+    
+    .main-container h1 {
+        text-align: center;
+        margin-bottom: 15px;
+        font-size: 24px;
+        color: #1d1d1f;
     }
     
     .products-grid {
@@ -72,11 +79,41 @@
         margin-top: 4px;
     }
     
+    /* Styles pour les actions de produit sur mobile */
+    .product-actions {
+        padding: 8px 6px 6px 6px;
+        display: flex;
+        gap: 4px;
+        justify-content: center;
+    }
+    
+    .product-actions .add-to-cart {
+        font-size: 10px !important;
+        padding: 4px 6px !important;
+        border-radius: 12px;
+        min-height: 24px;
+        flex: 1;
+        max-width: 120px;
+    }
+    
+    .product-actions .btn-like {
+        font-size: 10px !important;
+        padding: 4px 6px !important;
+        min-height: 24px;
+        width: 24px;
+    }
+    
     /* Optimisation des filtres sur mobile */
     .shop-container {
         padding: 10px 4px;
         width: 100%;
         margin: 0;
+    }
+    
+    /* Masquer les filtres catégorie et tri sur mobile */
+    .category-filter,
+    .sort-filter {
+        display: none !important;
     }
     
     .filters {
@@ -85,18 +122,24 @@
         margin-bottom: 15px;
     }
     
-    .search-bar,
-    .category-filter,
-    .sort-filter {
+    .search-bar {
         width: 100%;
         margin-bottom: 8px;
     }
     
-    .search-bar input,
-    .category-filter select,
-    .sort-filter select {
+    .search-bar input {
         font-size: 14px;
         padding: 8px 12px;
+        width: 100%;
+    }
+    
+    /* Réduire la taille du bouton ajouter au panier */
+    .add-to-cart,
+    .product-actions button {
+        font-size: 11px !important;
+        padding: 4px 8px !important;
+        border-radius: 15px;
+        min-height: 28px;
     }
 }
 
