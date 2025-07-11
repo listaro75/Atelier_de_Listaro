@@ -280,7 +280,7 @@ function updateStatus(orderId, newStatus) {
     formData.append('order_id', orderId);
     formData.append('status', newStatus);
     
-    fetch('admin_sections/orders.php', {
+    fetch('', {
         method: 'POST',
         body: formData,
         headers: {
@@ -314,7 +314,7 @@ function deleteOrder(orderId) {
     formData.append('action', 'delete_order');
     formData.append('order_id', orderId);
     
-    fetch('admin_sections/orders.php', {
+    fetch('', {
         method: 'POST',
         body: formData,
         headers: {

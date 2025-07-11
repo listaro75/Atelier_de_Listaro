@@ -568,7 +568,7 @@ try {
             formData.append('action', 'delete_prestation');
             formData.append('id', id);
             
-            fetch('admin_sections/prestations.php', {
+            fetch('', {
                 method: 'POST',
                 body: formData
             })
@@ -576,7 +576,9 @@ try {
             .then(data => {
                 if (data.success) {
                     showAlert(data.message, 'success');
-                    setTimeout(() => location.reload(), 1000);
+                    // Supprimer la ligne du tableau au lieu de recharger
+                    const row = document.querySelector(`tr[data-id="${id}"]`);
+                    if (row) row.remove();
                 } else {
                     showAlert(data.message, 'error');
                 }
@@ -634,7 +636,7 @@ try {
         
         const formData = new FormData(this);
         
-        fetch('admin_sections/prestations.php', {
+        fetch('', {
             method: 'POST',
             body: formData
         })
@@ -643,7 +645,6 @@ try {
             if (data.success) {
                 showAlert(data.message, 'success');
                 closeModal();
-                setTimeout(() => location.reload(), 1000);
             } else {
                 showAlert(data.message, 'error');
             }

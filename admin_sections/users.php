@@ -255,7 +255,7 @@ function changeRole(userId, newRole) {
     formData.append('user_id', userId);
     formData.append('role', newRole);
     
-    fetch('admin_sections/users.php', {
+    fetch('', {
         method: 'POST',
         body: formData,
         headers: {
@@ -289,7 +289,7 @@ function deleteUser(userId) {
     formData.append('action', 'delete_user');
     formData.append('user_id', userId);
     
-    fetch('admin_sections/users.php', {
+    fetch('', {
         method: 'POST',
         body: formData,
         headers: {

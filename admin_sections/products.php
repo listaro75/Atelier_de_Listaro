@@ -687,7 +687,7 @@ function deleteProduct(id) {
     formData.append('action', 'delete_product');
     formData.append('product_id', id);
     
-    fetch('admin_sections/products.php', {
+    fetch('products.php', {
         method: 'POST',
         body: formData,
         headers: {
@@ -697,8 +697,10 @@ function deleteProduct(id) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Recharger la page pour voir les changements
-            location.reload();
+            alert('Produit supprimé avec succès');
+            // Recharger seulement le tableau au lieu de toute la page
+            const row = document.querySelector(`tr[data-id="${id}"]`);
+            if (row) row.remove();
         } else {
             alert('Erreur: ' + data.message);
         }
@@ -715,7 +717,7 @@ document.getElementById('product-form').addEventListener('submit', function(e) {
     
     const formData = new FormData(this);
     
-    fetch('admin_sections/products.php', {
+    fetch('', {
         method: 'POST',
         body: formData,
         headers: {
@@ -726,7 +728,7 @@ document.getElementById('product-form').addEventListener('submit', function(e) {
     .then(data => {
         if (data.success) {
             alert('Produit ajouté avec succès');
-            location.reload();
+            hideAddForm();
         } else {
             alert('Erreur: ' + data.message);
         }
@@ -743,7 +745,7 @@ document.getElementById('edit-form').addEventListener('submit', function(e) {
     
     const formData = new FormData(this);
     
-    fetch('admin_sections/products.php', {
+    fetch('', {
         method: 'POST',
         body: formData,
         headers: {
@@ -755,7 +757,6 @@ document.getElementById('edit-form').addEventListener('submit', function(e) {
         if (data.success) {
             alert('Produit modifié avec succès');
             closeEditModal();
-            location.reload();
         } else {
             alert('Erreur: ' + data.message);
         }
@@ -928,7 +929,7 @@ function deleteProductImage(imageId) {
     formData.append('action', 'delete_image');
     formData.append('image_id', imageId);
     
-    fetch('admin_sections/products.php', {
+    fetch('', {
         method: 'POST',
         body: formData,
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -950,7 +951,7 @@ function setMainImage(imageId) {
     formData.append('action', 'set_main_image');
     formData.append('image_id', imageId);
     
-    fetch('admin_sections/products.php', {
+    fetch('', {
         method: 'POST',
         body: formData,
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
