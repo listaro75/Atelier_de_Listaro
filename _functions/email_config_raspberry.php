@@ -9,19 +9,17 @@
 
 // OPTION 1: Gmail avec domaine personnalisé (SOLUTION RECOMMANDÉE)
 // Créez un mot de passe d'application Gmail: https://support.google.com/accounts/answer/185833
-/*
 $email_config = [
     'method' => 'smtp',
     'smtp_host' => 'smtp.gmail.com',
     'smtp_port' => 587,
-    'smtp_username' => 'votre-email@gmail.com', // Votre email Gmail
-    'smtp_password' => 'votre-mot-de-passe-app', // Mot de passe d'application (16 caractères)
+    'smtp_username' => 'lucien.dacunha@gmail.com', // Votre email Gmail
+    'smtp_password' => 'xdiz iydk tisz jfop', // Mot de passe d'application (16 caractères)
     'smtp_encryption' => 'tls',
     'from_email' => 'noreply@atelierdelistaro.fr',
     'from_name' => 'Atelier de Listaro',
     'reply_to' => 'contact@atelierdelistaro.fr'
 ];
-*/
 
 // OPTION 2: OVH (si votre domaine est chez OVH)
 /*
@@ -63,34 +61,34 @@ $email_config = [
 ];
 */
 
-// CONFIGURATION ACTIVE - Postfix local sur Raspberry Pi
+// CONFIGURATION ACTIVE - Gmail SMTP (Configuration optimale)
+// Configuration désactivée - utilise Gmail SMTP ci-dessus
+/*
 $email_config = [
     'method' => 'local',
     'from_email' => 'noreply@atelierdelistaro.fr',
     'from_name' => 'Atelier de Listaro',
     'reply_to' => 'contact@atelierdelistaro.fr'
 ];
+*/
 
 /*
- * PROBLÈME DÉTECTÉ : Emails en queue mais non délivrés
+ * ✅ CONFIGURATION GMAIL SMTP ACTIVE
  * 
- * SOLUTIONS RECOMMANDÉES :
+ * Gmail SMTP configuré avec:
+ * - Email: lucien.dacunha@gmail.com
+ * - Mot de passe d'application configuré
+ * - Expéditeur: noreply@atelierdelistaro.fr
  * 
- * 1. SOLUTION RAPIDE - Configurer Gmail comme relayhost :
- *    sudo ./setup_gmail_smtp.sh
+ * AVANTAGES:
+ * ✅ Livraison immédiate via Gmail
+ * ✅ Réputation Gmail (pas de spam)
+ * ✅ Pas de configuration DNS requise
+ * ✅ Logs détaillés disponibles
  * 
- * 2. ALTERNATIVE - Activer Gmail SMTP dans cette config :
- *    - Décommentez la section OPTION 1 ci-dessus
- *    - Ajoutez vos identifiants Gmail
- *    - Changez method de 'local' à 'smtp'
- * 
- * 3. DIAGNOSTIC COMPLET :
- *    sudo ./fix_queue_email.sh
- * 
- * 4. CONFIGURATION DNS requise pour Postfix local :
- *    - MX: atelierdelistaro.fr → [IP_PUBLIQUE_RASPBERRY]
- *    - A:  mail.atelierdelistaro.fr → [IP_PUBLIQUE_RASPBERRY]  
- *    - SPF: v=spf1 ip4:[IP_PUBLIQUE_RASPBERRY] ~all
+ * TESTS DISPONIBLES:
+ * - Interface web: test_email_raspberry.php
+ * - URL directe: ?test=email&email=votre@email.com
  */
 
 // =============================================================================
@@ -148,18 +146,25 @@ function sendEmailSMTP($to, $subject, $body, $headers, $config) {
             'encryption' => $config['smtp_encryption']
         ]);
         
-        return $mailer->send(
-            $config['from_email'],
-            $config['from_name'],
+        // Utiliser sendMail avec les bons paramètres
+        $result = $mailer->sendMail(
             $to,
             $subject,
             $body,
-            true // HTML
+            $config['from_email'],
+            $config['from_name'],
+            $config['reply_to']
         );
+        
+        if ($result) {
+            return ['success' => true, 'message' => 'Email envoyé avec succès via Gmail SMTP'];
+        } else {
+            return ['success' => false, 'message' => 'Échec envoi Gmail SMTP'];
+        }
         
     } catch (Exception $e) {
         error_log("Erreur SMTP: " . $e->getMessage());
-        return false;
+        return ['success' => false, 'message' => 'Erreur SMTP: ' . $e->getMessage()];
     }
 }
 
